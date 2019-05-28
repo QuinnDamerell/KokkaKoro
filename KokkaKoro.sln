@@ -9,7 +9,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LocalGameRunner", "LocalGam
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameCore", "GameCore\GameCore.csproj", "{6DF27F57-FE1F-4665-8180-FFE95C397B92}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameService", "GameService\GameService.csproj", "{ECFAE954-4BA3-4606-9EDD-4B538E47E1F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameService", "GameService\GameService.csproj", "{ECFAE954-4BA3-4606-9EDD-4B538E47E1F5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceSdk", "ServiceSdk\ServiceSdk.csproj", "{5B729C99-E6DC-4C5B-BF37-F6DA13C6B2E7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceSdkExample", "ServiceSdkExample\ServiceSdkExample.csproj", "{7BD9CB7E-3417-4711-B025-6C3A38D35CBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProtocol", "ServiceProtocol\ServiceProtocol.csproj", "{1FFC66E1-426D-4EB5-A7DD-65285315F2B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +39,18 @@ Global
 		{ECFAE954-4BA3-4606-9EDD-4B538E47E1F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ECFAE954-4BA3-4606-9EDD-4B538E47E1F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ECFAE954-4BA3-4606-9EDD-4B538E47E1F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B729C99-E6DC-4C5B-BF37-F6DA13C6B2E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B729C99-E6DC-4C5B-BF37-F6DA13C6B2E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B729C99-E6DC-4C5B-BF37-F6DA13C6B2E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B729C99-E6DC-4C5B-BF37-F6DA13C6B2E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BD9CB7E-3417-4711-B025-6C3A38D35CBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BD9CB7E-3417-4711-B025-6C3A38D35CBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BD9CB7E-3417-4711-B025-6C3A38D35CBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BD9CB7E-3417-4711-B025-6C3A38D35CBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FFC66E1-426D-4EB5-A7DD-65285315F2B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FFC66E1-426D-4EB5-A7DD-65285315F2B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FFC66E1-426D-4EB5-A7DD-65285315F2B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FFC66E1-426D-4EB5-A7DD-65285315F2B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
