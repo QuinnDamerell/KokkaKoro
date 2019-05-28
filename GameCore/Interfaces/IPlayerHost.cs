@@ -1,14 +1,16 @@
-﻿using System;
+﻿using GameCore.CommonObjects;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace GameCore.Interfaces
 {
-    interface IPlayerHostControl
+    interface IPlayerHost
     {
-        void OnRegister();
+        void OnGameBegin(IPlayerControl controller, GameState initalState);
 
-        void OnGameUpdate();
-        void OnTurn();
+        void OnGameUpdate(GameState initalState);
+
+        void OnTurn(GameState gameState);
     }
 }

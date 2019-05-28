@@ -2,8 +2,6 @@
 
 namespace GameCore
 {
-    interface
-
     public class GameEngine
     {
 
