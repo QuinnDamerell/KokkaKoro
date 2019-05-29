@@ -25,7 +25,7 @@ namespace ServiceProtocol.Common
 
     public class KokkaKoroGame
     {
-        // The univeral id of the game.
+        // The universal id of the game.
         public Guid Id;
 
         // The current state of the game
@@ -38,6 +38,9 @@ namespace ServiceProtocol.Common
         // Who created it.
         public string CreatedBy;
 
+        // The current players in the game.
+        public List<KokkaKoroPlayer> Players = new List<KokkaKoroPlayer>();
+
         // How many players can join
         public int PlayerLimit;
 
@@ -47,7 +50,7 @@ namespace ServiceProtocol.Common
         // Indicates the max time a turn can take.
         public double TurnTimeLimitSeconds;
 
-        // Indicates the mininum time a turn can take
+        // Indicates the minimum time a turn can take
         public double MinTurnTimeLimitSeconds;
 
         // Indicates the max time the game can take.

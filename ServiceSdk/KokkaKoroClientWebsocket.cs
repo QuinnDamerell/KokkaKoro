@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using ServiceProtocol;
+using ServiceSdk;
 using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
@@ -14,8 +15,6 @@ namespace KokkaKoro
         NotConnected,
         Connecting,
         Connected,
-        Sending,
-        WaitingToRecieve,
         Disconnected
     }
 
@@ -35,20 +34,21 @@ namespace KokkaKoro
         object m_stateLock = new object();
         CancellationTokenSource m_readLoopCancellationToken = new CancellationTokenSource();
         Dictionary<int, PendingRequest> m_pendingRequests = new Dictionary<int, PendingRequest>();
+        SemaphoreSlim m_sendingSemaphore = new SemaphoreSlim(1);
 
         public KokkaKoroClientWebsocket()
         {
             m_state = WebsocketState.NotConnected;
         }
 
-        public async Task<bool> Connect(string url)
+        public async Task Connect(string url)
         {
             // Check our state.
             lock(m_stateLock)
             {
                 if(m_state != WebsocketState.NotConnected)
                 {
-                    return false;
+                    throw new KokkaKoroException("Websocket not connected", false);
                 }
                 m_state = WebsocketState.Connecting;
             }
@@ -66,13 +66,14 @@ namespace KokkaKoro
                 // Start the read loop.
                 ReadLoop();
 
-                return true;
+                Logger.Info($"Connected to {url}");
             }
             catch(Exception e)
             {
                 await InternalDisconnect();
-                return false;
-            }      
+                Logger.Error($"Failed to connect to service {url}", e);
+                throw new KokkaKoroException($"Failed to connect to service: {e.Message}", false);
+            }
         }
 
         private async void ReadLoop()
@@ -94,6 +95,7 @@ namespace KokkaKoro
                     // If we are closed, make sure it's shutdown.
                     if (response.CloseStatus != null && response.CloseStatus != WebSocketCloseStatus.Empty)
                     {
+                        Logger.Info($"Websocket closed from read loop");
                         await InternalDisconnect();
                         return;
                     }
@@ -103,6 +105,7 @@ namespace KokkaKoro
                 }
                 catch(Exception e)
                 {
+                    Logger.Error("Exception thrown in websocket read loop", e);
                     await InternalDisconnect();
                     return;
                 }
@@ -110,7 +113,9 @@ namespace KokkaKoro
         }
 
         private void HandleNewMessage(string msg)
-        {  
+        {
+            Logger.Info($"<- {msg}");
+
             // Parse the response.
             KokkaKoroResponse<object> response = JsonConvert.DeserializeObject<KokkaKoroResponse<object>>(msg);
             if(response.Type == KokkaKoroResponseType.GameUpdate)
@@ -128,10 +133,12 @@ namespace KokkaKoro
                         PendingRequest pending = m_pendingRequests[response.RequestId];
                         m_pendingRequests.Remove(response.RequestId);
                         pending.Response = msg;
-                        //pending.Event.Release();
+                        pending.Event.Release();
                     }
                     else
                     {
+                        Logger.Error($"We got a response that didn't have a pending request.");
+
                         // This is a bad state, but we will just return the response to anyone.
                         foreach (KeyValuePair<int, PendingRequest> p in m_pendingRequests)
                         {
@@ -141,6 +148,8 @@ namespace KokkaKoro
                             p.Value.Event.Release();
                             break;
                         }
+
+                        Logger.Error($"We got a response that didn't have a pending request, and we don't have any outstanding requests.");
                     }
                 }
             }
@@ -162,21 +171,29 @@ namespace KokkaKoro
                 m_state = WebsocketState.Disconnected;
             }
 
+            Logger.Info("Websocket disconnected");
+
             // Stop the read loop.
             m_readLoopCancellationToken.Cancel();
 
-            // If we have a websocket close it.
-            try
+            // Send a close message
+            if (m_websocket != null)
             {
-                if (m_websocket != null)
-                {
+                try
+                {                  
                     var writeTimeout = new CancellationTokenSource(WriteTimeoutMs);
-                    await m_websocket.SendAsync(new ArraySegment<byte>(), WebSocketMessageType.Close, true, writeTimeout.Token);
-                    var closeTimeout = new CancellationTokenSource(WriteTimeoutMs);
-                    await m_websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "close", closeTimeout.Token);
+                    await m_websocket.SendAsync(new ArraySegment<byte>(), WebSocketMessageType.Close, true, writeTimeout.Token);                    
                 }
+                catch { }
+
+                // And close the websocket.
+                try
+                {                    
+                    var closeTimeout = new CancellationTokenSource(WriteTimeoutMs);
+                    await m_websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "close", closeTimeout.Token);                    
+                }
+                catch { }
             }
-            catch { }
         }
 
         public async Task<string> SendRequest(KokkaKoroRequest<object> request)
@@ -185,9 +202,8 @@ namespace KokkaKoro
             {
                 if (m_state != WebsocketState.Connected)
                 {
-                    return null;
+                    throw new KokkaKoroException("Websocket not connected", false);
                 }
-                m_state = WebsocketState.Sending;
             }
 
             try
@@ -205,9 +221,27 @@ namespace KokkaKoro
                     m_pendingRequests.Add(request.RequestId, pending);
                 }
 
-                // Send the data          
-                var writeTimeout = new CancellationTokenSource(WriteTimeoutMs);
-                await m_websocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, writeTimeout.Token);
+                Logger.Info($"-> {json}");
+
+                // Send the data    
+                {
+                    var writeTimeout = new CancellationTokenSource(WriteTimeoutMs);
+
+                    // Only one thread at a time can call sending, so make sure we enforce it.
+                    await m_sendingSemaphore.WaitAsync(WriteTimeoutMs);
+                    try
+                    {
+                        await m_websocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, writeTimeout.Token);
+                    }
+                    catch(Exception e)
+                    {
+                        throw e;
+                    }
+                    finally
+                    {
+                        m_sendingSemaphore.Release();
+                    }
+                }
 
                 // Wait for the message to come back
                 await pending.Event.WaitAsync(ResponseTimeoutMs);
@@ -221,18 +255,19 @@ namespace KokkaKoro
                     }
                 }
 
-                // Grab the repsonse if we got one
+                // Grab the response if we got one
                 string response = pending.Response;
                 if(String.IsNullOrWhiteSpace(response))
                 {
-                    return null;
+                    throw new KokkaKoroException("Request didn't get a response", true);
                 }
                 return response;
             }
             catch(Exception e)
             {
+                Logger.Error($"Exception thrown in send request logic.", e);
                 await InternalDisconnect();
-                return null;
+                throw e;
             }      
         }
     }

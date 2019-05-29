@@ -16,10 +16,16 @@ namespace ServiceProtocol
         // Creates a new game with the CreateGameOptions class.
         [EnumMember(Value = "CreateGame")]
         CreateGame = 1,
-       
+
+        // Adds a bot to a game
+        [EnumMember(Value = "AddBot")]
+        AddBot = 2,
+
+        // Joins the current client as a live player.
         [EnumMember(Value = "JoinGame")]
         JoinGame = 2,
 
+        // Starts the given game.
         [EnumMember(Value = "StartGame")]
         StartGame = 3,
 

@@ -14,6 +14,7 @@ namespace GameService.ServiceCore
 
         Guid m_id;
         KokkaKoroGameState m_state;
+        object m_stateLock = new object();
         int m_playerLimit;
         string m_password;
         string m_gameName;
@@ -22,6 +23,8 @@ namespace GameService.ServiceCore
         TimeSpan m_turnTimeLimit;
         TimeSpan m_gameTimeLmit;
         DateTime m_createdAt;
+
+        List<ServicePlayer> m_players = new List<ServicePlayer>();
 
         public ServiceGame(int? playerLimit = null, string gameName = null, string createdBy = null, string password = null, TimeSpan? turnTimeLimit = null, TimeSpan? minTurnLimit = null, TimeSpan? gameTimeLimit = null)
         {
@@ -56,13 +59,87 @@ namespace GameService.ServiceCore
             return m_id;
         }
 
+        public bool ValidatePassword(string userPassword)
+        {
+            if(String.IsNullOrWhiteSpace(m_password))
+            {
+                return true;
+            }
+            if(String.IsNullOrWhiteSpace(userPassword))
+            {
+                return false;
+            }
+            return m_password.Equals(userPassword);
+        }
+
+        public string AddPlayer(string playerName, Guid? botId, Guid? userId)
+        {
+            if(!botId.HasValue && !userId.HasValue)
+            {
+                return "No bot or user specified.";
+            }
+
+            lock(m_stateLock)
+            {
+                if(m_state != KokkaKoroGameState.Lobby)
+                {
+                    return "Game not in joinable state.";
+                }
+            }
+
+            lock (m_players)
+            {
+                if (m_players.Count() >= m_playerLimit)
+                {
+                    return "Game full";
+                }
+                m_players.Add(new ServicePlayer(botId, userId, playerName));
+            }
+            return null;
+        }
+
+        public string StartGame()
+        {
+            lock(m_players)
+            {
+                if(m_players.Count < 1)
+                {
+                    return "There must be at least a player to start the game.";
+                }
+            }
+
+            lock (m_stateLock)
+            {
+                if (m_state != KokkaKoroGameState.Lobby)
+                {
+                    return "Invalid state to start game";
+                }
+                m_state = KokkaKoroGameState.InProgress;
+            }
+
+            // TODO STUFF
+
+            return null;
+        }
+
         public KokkaKoroGame GetInfo()
         {
+            // Build a list of players.
+            List<KokkaKoroPlayer> players = new List<KokkaKoroPlayer>();
+            lock (m_players)
+            {
+                foreach (ServicePlayer player in m_players)
+                {
+                    players.Add(player.GetInfo());
+                }
+            }
+
             return new KokkaKoroGame
             {
                 State = m_state,
                 Id = m_id,
                 PlayerLimit = (int)m_playerLimit,
+                Players = players,
                 GameName = m_gameName,
                 CreatedBy = m_createdBy,
                 HasPassword = !String.IsNullOrWhiteSpace(m_password),

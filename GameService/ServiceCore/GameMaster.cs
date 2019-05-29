@@ -62,11 +62,15 @@ namespace GameService.ServiceCore
                     return CreateGame(jsonStr);
                 case KokkaKoroCommands.ListGames:
                     return ListGames(jsonStr);
+                case KokkaKoroCommands.AddBot:
+                    return AddBot(jsonStr, userId);
+                case KokkaKoroCommands.StartGame:
+                    return StartGame(jsonStr, userId);
             }
-            return KokkaKoroResponse<object>.CreateError("Command not implmented.");
+            return KokkaKoroResponse<object>.CreateError("Command not implemented.");
         }
 
-        #region Game Managment
+        #region Game Management
 
         Dictionary<Guid, ServiceGame> m_currentGames = new Dictionary<Guid, ServiceGame>();
 
@@ -125,7 +129,7 @@ namespace GameService.ServiceCore
                 gameTime
                 );
 
-            // Add it to the dictonary
+            // Add it to the dictionary
             lock(m_currentGames)
             {
                 m_currentGames.Add(game.GetId(), game);
@@ -148,6 +152,132 @@ namespace GameService.ServiceCore
                 }
             }
             return KokkaKoroResponse<object>.CreateResult(result);
+        }
+
+        private KokkaKoroResponse<object> StartGame(string command, string userId)
+        {
+            // Parse the request options
+            KokkaKoroRequest<StartGameOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<StartGameOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse start game", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // Validate
+            if (request.CommandOptions == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.GameId.ToString()))
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId is required.");
+            }
+
+            // Find the game
+            ServiceGame game = null;
+            lock (m_currentGames)
+            {
+                if (m_currentGames.ContainsKey(request.CommandOptions.GameId))
+                {
+                    game = m_currentGames[request.CommandOptions.GameId];
+                }
+            }
+            if (game == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId not found.");
+            }
+
+            // Validate the password (if there is one)
+            if (!game.ValidatePassword(request.CommandOptions.Password))
+            {
+                return KokkaKoroResponse<object>.CreateError("Invalid password for gameId.");
+            }
+
+            // Try to start it.
+            string error = game.StartGame();
+            if (String.IsNullOrWhiteSpace(error))
+            {
+                // Success, return the game info.
+                StartGameResponse resp = new StartGameResponse { Game = game.GetInfo() };
+                return KokkaKoroResponse<object>.CreateResult(resp);
+            }
+            else
+            {
+                return KokkaKoroResponse<object>.CreateError($"Failed to start game: {error}.");
+            }
+        }
+
+        #endregion
+
+        #region Player Management
+
+        private KokkaKoroResponse<object> AddBot(string command, string userId)
+        {
+            // Parse the request options
+            KokkaKoroRequest<AddBotOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<AddBotOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse add bot", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // Validate
+            if (request.CommandOptions == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.GameId.ToString()))
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId is required.");
+            }
+            
+            // Find the game
+            ServiceGame game = null;
+            lock(m_currentGames)
+            {
+                if(m_currentGames.ContainsKey(request.CommandOptions.GameId))
+                {
+                    game = m_currentGames[request.CommandOptions.GameId];
+                }
+            }
+            if(game == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId not found.");
+            }
+
+            // Validate the password (if there is one)
+            if(!game.ValidatePassword(request.CommandOptions.Password))
+            {
+                return KokkaKoroResponse<object>.CreateError("Invalid password for gameId.");
+            }
+
+            string botName = "Carl";
+            if (!String.IsNullOrWhiteSpace(request.CommandOptions.BotName))
+            {
+                botName = request.CommandOptions.BotName;
+            }
+
+            // Try to add the bot.
+            string error = game.AddPlayer(botName, request.CommandOptions.BotId, null);
+            if (String.IsNullOrWhiteSpace(error))
+            {
+                // Success, return the game info.
+                AddBotResponse resp = new AddBotResponse { Game = game.GetInfo() };
+                return KokkaKoroResponse<object>.CreateResult(resp);
+            }
+            else
+            {
+                return KokkaKoroResponse<object>.CreateError($"Failed to add bot: {error}.");
+            }
         }
 
         #endregion
