@@ -28,10 +28,12 @@ namespace ServiceSdkExample
             Service kokkaService = new Service();
 
             // Connect to the service
-            if (await kokkaService.ConnectAsync(51052))
+            if (!(await kokkaService.ConnectAsync(51052)))
             {
                 return;
             }
+
+            await kokkaService.GetGames();
 
 
 

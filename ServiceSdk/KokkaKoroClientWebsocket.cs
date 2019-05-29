@@ -19,16 +19,22 @@ namespace KokkaKoro
         Disconnected
     }
 
+    class PendingRequest
+    {
+        public SemaphoreSlim Event = new SemaphoreSlim(0);
+        public string Response;
+    }
+
     class KokkaKoroClientWebsocket
     {
-        public readonly int WriteTimeoutMs = 10000;
-        public readonly int ResponseTimeoutMs = 10000;
+        public readonly int WriteTimeoutMs = 30000;
+        public readonly int ResponseTimeoutMs = 30000;
 
         ClientWebSocket m_websocket;
         WebsocketState m_state;
         object m_stateLock = new object();
         CancellationTokenSource m_readLoopCancellationToken = new CancellationTokenSource();
-
+        Dictionary<int, PendingRequest> m_pendingRequests = new Dictionary<int, PendingRequest>();
 
         public KokkaKoroClientWebsocket()
         {
@@ -74,11 +80,11 @@ namespace KokkaKoro
             while(m_state != WebsocketState.Disconnected)
             {
                 try
-                
+                {                 
                     // Try to read off the socket
                     WebSocketReceiveResult response;
                     var message = new List<byte>();
-                    var buffer = new byte[40096];
+                    var buffer = new byte[40000];
                     do
                     {
                         response = await m_websocket.ReceiveAsync(new ArraySegment<byte>(buffer), m_readLoopCancellationToken.Token);
@@ -86,27 +92,66 @@ namespace KokkaKoro
                     } while (!response.EndOfMessage && response.CloseStatus == WebSocketCloseStatus.Empty);
 
                     // If we are closed, make sure it's shutdown.
-                    if (response.CloseStatus != WebSocketCloseStatus.Empty)
+                    if (response.CloseStatus != null && response.CloseStatus != WebSocketCloseStatus.Empty)
                     {
                         await InternalDisconnect();
                         return;
                     }
 
+                    // Handle the message
+                    HandleNewMessage(Encoding.UTF8.GetString(message.ToArray()));
                 }
                 catch(Exception e)
                 {
+                    await InternalDisconnect();
+                    return;
+                }
+            }
+        }
 
+        private void HandleNewMessage(string msg)
+        {  
+            // Parse the response.
+            KokkaKoroResponse<object> response = JsonConvert.DeserializeObject<KokkaKoroResponse<object>>(msg);
+            if(response.Type == KokkaKoroResponseType.GameUpdate)
+            {
+                // This is a broadcast message
+                // ToDo try catch this.
+            }
+            else
+            {
+                // This is a response, there should be a request waiting.
+                lock (m_pendingRequests)
+                {
+                    if (m_pendingRequests.ContainsKey(response.RequestId))
+                    {
+                        PendingRequest pending = m_pendingRequests[response.RequestId];
+                        m_pendingRequests.Remove(response.RequestId);
+                        pending.Response = msg;
+                        //pending.Event.Release();
+                    }
+                    else
+                    {
+                        // This is a bad state, but we will just return the response to anyone.
+                        foreach (KeyValuePair<int, PendingRequest> p in m_pendingRequests)
+                        {
+                            // Take the first one and let it go back.
+                            m_pendingRequests.Remove(p.Key);
+                            p.Value.Response = msg;
+                            p.Value.Event.Release();
+                            break;
+                        }
+                    }
                 }
             }
         }
 
         public async Task Disconnect()
-        {
-      
+        {      
             await InternalDisconnect();
         }
 
-        private async Task InternalDisconnect(bool ingoreState)
+        private async Task InternalDisconnect()
         {
             lock (m_stateLock)
             {
@@ -116,9 +161,6 @@ namespace KokkaKoro
                 }
                 m_state = WebsocketState.Disconnected;
             }
-
-            // Set the state            
-            m_state = WebsocketState.Disconnected;
 
             // Stop the read loop.
             m_readLoopCancellationToken.Cancel();
@@ -137,13 +179,13 @@ namespace KokkaKoro
             catch { }
         }
 
-        public async Task<bool> SendMessage(KokkaKoroRequest<object> request)
+        public async Task<string> SendRequest(KokkaKoroRequest<object> request)
         {
             lock (m_stateLock)
             {
                 if (m_state != WebsocketState.Connected)
                 {
-                    return false;
+                    return null;
                 }
                 m_state = WebsocketState.Sending;
             }
@@ -156,21 +198,42 @@ namespace KokkaKoro
                 // Convert to bytes
                 Byte[] bytes = System.Text.Encoding.UTF8.GetBytes(json);
 
+                // Create a pending response object.
+                PendingRequest pending = new PendingRequest();
+                lock (m_pendingRequests)
+                {
+                    m_pendingRequests.Add(request.RequestId, pending);
+                }
+
                 // Send the data          
                 var writeTimeout = new CancellationTokenSource(WriteTimeoutMs);
                 await m_websocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, writeTimeout.Token);
 
-                // Requests always result in responses, so wait for it.
-                var readTimeout = new CancellationTokenSource(ResponseTimeoutMs);
+                // Wait for the message to come back
+                await pending.Event.WaitAsync(ResponseTimeoutMs);
 
-                m_websocket.sen
+                // Make sure we remove the pending request.
+                lock (m_pendingRequests)
+                {
+                    if (m_pendingRequests.ContainsKey(request.RequestId))
+                    {
+                        m_pendingRequests.Remove(request.RequestId);
+                    }
+                }
+
+                // Grab the repsonse if we got one
+                string response = pending.Response;
+                if(String.IsNullOrWhiteSpace(response))
+                {
+                    return null;
+                }
+                return response;
             }
             catch(Exception e)
             {
-
-            }
-
-         
+                await InternalDisconnect();
+                return null;
+            }      
         }
     }
 }

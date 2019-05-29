@@ -13,17 +13,24 @@ namespace GameService.WebsocketsHelpers
     {
         WebSocket m_socket;
         Guid m_id;
+        TaskCompletionSource<object> m_websocketCompletion;
         IWebSocketMessageHandler m_handler;
         CancellationTokenSource m_readCancelToken = new CancellationTokenSource();
         CancellationTokenSource m_writeCancelToken = new CancellationTokenSource();
         object m_closeLock = new object();
         bool m_isClosed = false;
 
-        public BetterWebsocket(Guid id, WebSocket socket, IWebSocketMessageHandler handler)
+        public BetterWebsocket(Guid id, WebSocket socket, TaskCompletionSource<object> tcs, IWebSocketMessageHandler handler)
         {
             m_socket = socket;
             m_id = id;
             m_handler = handler;
+
+            // Due to the way kestrel handles websockets/
+            // we need to block the middleware function that called us until the socket is done.
+            // Otherwise the socket will be closed from under us.
+            m_websocketCompletion = tcs;
+
             ReadLoop();
         }
 
@@ -47,7 +54,7 @@ namespace GameService.WebsocketsHelpers
                         message.AddRange(new ArraySegment<byte>(buffer, 0, response.Count));
                     } while (!response.EndOfMessage && response.CloseStatus == WebSocketCloseStatus.Empty);
 
-                    if(response.CloseStatus != WebSocketCloseStatus.Empty)
+                    if(response.CloseStatus != null && response.CloseStatus != WebSocketCloseStatus.Empty)
                     {
                         CloseWebSocket(false);
                         return;
@@ -56,7 +63,7 @@ namespace GameService.WebsocketsHelpers
                     // Handle the message
                     string result = m_handler.OnMessage(this, Encoding.UTF8.GetString(message.ToArray()));
 
-                    // Send the result back
+                    // Send the result back.
                     Byte[] bytes = System.Text.Encoding.UTF8.GetBytes(result);
 
                     //Sends data back.                     
@@ -102,6 +109,9 @@ namespace GameService.WebsocketsHelpers
             {
                 Logger.Error("Failed to close websocket.", e);
             }
+
+            // Make sure the handler returns, see comment there this is set.
+            m_websocketCompletion.SetResult(1);
 
             // Inform the handler we are now closed.
             m_handler.OnClosed(this);

@@ -26,9 +26,9 @@ namespace GameService.WebsocketsHelpers
 
         Dictionary<Guid, BetterWebsocket> m_activeConnections = new Dictionary<Guid, BetterWebsocket>();
 
-        public void NewConnection(WebSocket socket)
+        public void NewConnection(WebSocket socket, TaskCompletionSource<object> tcs)
         {
-            BetterWebsocket bsock = new BetterWebsocket(Guid.NewGuid(), socket, this);
+            BetterWebsocket bsock = new BetterWebsocket(Guid.NewGuid(), socket, tcs, this);
             lock(m_activeConnections)
             {
                 m_activeConnections.Add(bsock.GetId(), bsock);

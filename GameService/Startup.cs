@@ -54,14 +54,23 @@ namespace GameService
             app.UseWebSockets();
 
             app.UseMvc();
+
+            // This code handles websockets coming into the system.
             app.Use(async (context, next) =>
             {
                 if (context.Request.Path == "/ws")
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
+                        // Upgrade the connection
                         WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                        WebsocketManager.Get().NewConnection(webSocket);
+
+                        // We need to block this exectuion here until we are done with the socket.
+                        // If we don't, the socket will close when it returns.
+                        // The BetterWebsocket class will set this completion when it's done.
+                        var tcs = new TaskCompletionSource<object>();
+                        WebsocketManager.Get().NewConnection(webSocket, tcs);
+                        await tcs.Task;
                     }
                     else
                     {
