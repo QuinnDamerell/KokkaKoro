@@ -16,7 +16,7 @@ namespace ServiceSdkExample
         static void Main(string[] args)
         {
             m_doneEvent = new AutoResetEvent(false);
-            DoWork();
+            DoWorkWrapper();
             m_doneEvent.WaitOne();
         }
 
@@ -39,7 +39,7 @@ namespace ServiceSdkExample
 
                 // Connect to the service
                 Console.WriteLine($"Connecting to service...");
-                await kokkaKoroService.ConnectAsync();
+                await kokkaKoroService.ConnectAsync(51052);
                 Console.WriteLine($"");
 
                 // Get a list of the current games.
@@ -48,6 +48,16 @@ namespace ServiceSdkExample
                 foreach (KokkaKoroGame game in games)
                 {
                     Console.WriteLine($"  {game.GameName} - Players {game.Players.Count}, {game.Id}");
+                }
+                Console.WriteLine($"");
+                Console.WriteLine($"");
+
+                // Get a list of the bots.
+                List<KokkaKoroBot> bots = await kokkaKoroService.ListBots();
+                Console.WriteLine($"Current bots:");
+                foreach (KokkaKoroBot bot in bots)
+                {
+                    Console.WriteLine($"  {bot.Name} - {bot.Major}.{bot.Minor}.{bot.Revision}");
                 }
                 Console.WriteLine($"");
                 Console.WriteLine($"");
@@ -64,8 +74,8 @@ namespace ServiceSdkExample
                 // Add bots to the game we just made.
                 AddBotOptions botsOpts = new AddBotOptions()
                 {
-                    BotId = Guid.NewGuid(),
-                    BotName = "Carl",
+                    BotName = "TestBot",
+                    InGameName = "Quinn",
                     GameId = newGame.Id
                 };
                 newGame = await kokkaKoroService.AddBotToGame(botsOpts);
@@ -73,8 +83,8 @@ namespace ServiceSdkExample
 
                 botsOpts = new AddBotOptions()
                 {
-                    BotId = Guid.NewGuid(),
-                    BotName = "Marilyn",
+                    BotName = "TestBot",
+                    InGameName = "Marilyn",
                     GameId = newGame.Id
                 };
                 newGame = await kokkaKoroService.AddBotToGame(botsOpts);
@@ -93,14 +103,15 @@ namespace ServiceSdkExample
                 Console.WriteLine("");
                 Console.WriteLine("");
                 Console.WriteLine("!! ERROR !!");
-                Console.WriteLine($"Something failed {e.Message}, was from service? {e.IsFromService()}");
+                Console.WriteLine($"   Message:{e.Message}");
+                Console.WriteLine($"   Was From Service? {e.IsFromService()}");
             }
             catch(Exception e)
             {
                 Console.WriteLine("");
                 Console.WriteLine("");
                 Console.WriteLine("!! ERROR !!");
-                Console.WriteLine($"Something failed {e.Message}");
+                Console.WriteLine($"   Message:{e.Message}");
             }
         }
     }

@@ -60,6 +60,33 @@ namespace KokkaKoro
             return obj;
         }
 
+        #region User Stuff
+
+        public async Task<string> SetUserName(SetUserNameOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if (String.IsNullOrWhiteSpace(options.UserName))
+            {
+                throw new KokkaKoroException("A user name is required!", false);
+            }
+
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.SetUserName,
+                CommandOptions = options
+            };
+
+            KokkaKoroResponse<SetUserNameResponse> response = await MakeRequest<SetUserNameResponse>(request, "set user name");
+
+            return response.Data.AcceptedUserName;
+        }
+
+        #endregion
+
         #region Game Stuff
 
         public async Task<KokkaKoroGame> CreateGame(CreateGameOptions options)
@@ -105,31 +132,6 @@ namespace KokkaKoro
             return games;
         }
 
-        public async Task<KokkaKoroGame> AddBotToGame(AddBotOptions options)
-        {
-            if (options == null)
-            {
-                throw new KokkaKoroException("Options are required!", false);
-            }
-            if (String.IsNullOrWhiteSpace(options.BotName))
-            {
-                throw new KokkaKoroException("BotName is required!", false);
-            }
-
-            // Build the request
-            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
-            {
-                Command = KokkaKoroCommands.AddBot,
-                CommandOptions = options
-            };
-
-            // Make the request and validate.
-            KokkaKoroResponse<AddBotResponse> response = await MakeRequest<AddBotResponse>(request, "add bot");
-
-            // Pull out the list to return.
-            return response.Data.Game;
-        }
-
         public async Task<KokkaKoroGame> StartGame(StartGameOptions options)
         {
             if (options == null)
@@ -146,6 +148,59 @@ namespace KokkaKoro
 
             // Make the request and validate.
             KokkaKoroResponse<StartGameResponse> response = await MakeRequest<StartGameResponse>(request, "start game");
+
+            // Pull out the list to return.
+            return response.Data.Game;
+        }
+
+        #endregion
+
+        #region Bot Stuff
+
+        public async Task<List<KokkaKoroBot>> ListBots()
+        {
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.ListBots
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<ListBotsResponse> response = await MakeRequest<ListBotsResponse>(request, "list bots");
+
+            // Pull out the list to return.
+            List<KokkaKoroBot> bots = new List<KokkaKoroBot>();
+            foreach (KokkaKoroBot bot in response.Data.Bots)
+            {
+                bots.Add(bot);
+            }
+            return bots;
+        }
+
+        public async Task<KokkaKoroGame> AddBotToGame(AddBotOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if (String.IsNullOrWhiteSpace(options.BotName))
+            {
+                throw new KokkaKoroException("BotName is required!", false);
+            }
+            if (String.IsNullOrWhiteSpace(options.InGameName))
+            {
+                throw new KokkaKoroException("InGameName is required!", false);
+            }
+
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.AddBot,
+                CommandOptions = options
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<AddBotResponse> response = await MakeRequest<AddBotResponse>(request, "add bot");
 
             // Pull out the list to return.
             return response.Data.Game;

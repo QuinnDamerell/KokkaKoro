@@ -8,24 +8,34 @@ namespace GameService.ServiceCore
 {
     public class ServicePlayer
     {
-        string m_playerName;
-        Guid? m_botId;
+        string m_inGameName;
+        ServiceBot m_bot;
         Guid? m_userId;
 
-        public ServicePlayer(Guid? botId, Guid? userId, string playerName)
+        public ServicePlayer(ServiceBot bot, string inNameGame)
         {
-            m_botId = botId;
+            m_inGameName = inNameGame;
+            m_bot = bot;
+        }
+
+        public ServicePlayer(Guid userId, string inNameGame)
+        {
             m_userId = userId;
-            m_playerName = playerName;
+            m_inGameName = inNameGame;
+        }
+
+        public string GetInGameName()
+        {
+            return m_inGameName;
         }
 
         public KokkaKoroPlayer GetInfo()
         {
             return new KokkaKoroPlayer()
             {
-                BotId = m_botId,
-                IsBot = m_botId != null,
-                PlayerName = m_playerName
+                BotName = m_bot == null ? null : m_bot.GetBotName(),
+                IsBot = m_bot != null,
+                PlayerName = m_inGameName
             };
         }
     }

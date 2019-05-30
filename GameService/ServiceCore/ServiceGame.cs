@@ -1,6 +1,8 @@
 ﻿using ServiceProtocol.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,7 +16,7 @@ namespace GameService.ServiceCore
 
         Guid m_id;
         KokkaKoroGameState m_state;
-        object m_stateLock = new object();
+        object m_gameLock = new object();
         int m_playerLimit;
         string m_password;
         string m_gameName;
@@ -72,44 +74,59 @@ namespace GameService.ServiceCore
             return m_password.Equals(userPassword);
         }
 
-        public string AddPlayer(string playerName, Guid? botId, Guid? userId)
+        public async Task<string> AddBot(string inGameName, string botName)
         {
-            if(!botId.HasValue && !userId.HasValue)
+            if(String.IsNullOrWhiteSpace(inGameName) || String.IsNullOrWhiteSpace(botName))
             {
-                return "No bot or user specified.";
+                return "No bot name or in game name specified.";
             }
 
-            lock(m_stateLock)
+            // Downlaod the bot locally.
+            ServiceBot bot;
+            try
             {
-                if(m_state != KokkaKoroGameState.Lobby)
+                bot = await StorageMaster.Get().DownloadBot(botName);
+            }
+            catch(Exception e)
+            {
+                return $"Failed to load bot: {e.Message}";
+            }     
+            
+            lock(m_gameLock)
+            {
+                // Check the state
+                if (m_state != KokkaKoroGameState.Lobby)
                 {
                     return "Game not in joinable state.";
                 }
-            }
 
-            lock (m_players)
-            {
+                // Make sure the name is unique, for fun.
                 if (m_players.Count() >= m_playerLimit)
                 {
                     return "Game full";
                 }
-                m_players.Add(new ServicePlayer(botId, userId, playerName));
+                foreach (ServicePlayer player in m_players)
+                {
+                    if (inGameName == player.GetInGameName())
+                    {
+                        inGameName += "est";
+                    }
+                }
+                m_players.Add(new ServicePlayer(bot, inGameName));                
             }
+      
             return null;
         }
 
         public string StartGame()
         {
-            lock(m_players)
+            lock (m_gameLock)
             {
-                if(m_players.Count < 1)
+                if (m_players.Count < 1)
                 {
                     return "There must be at least a player to start the game.";
                 }
-            }
 
-            lock (m_stateLock)
-            {
                 if (m_state != KokkaKoroGameState.Lobby)
                 {
                     return "Invalid state to start game";
@@ -126,7 +143,7 @@ namespace GameService.ServiceCore
         {
             // Build a list of players.
             List<KokkaKoroPlayer> players = new List<KokkaKoroPlayer>();
-            lock (m_players)
+            lock (m_gameLock)
             {
                 foreach (ServicePlayer player in m_players)
                 {

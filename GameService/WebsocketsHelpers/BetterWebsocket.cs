@@ -13,12 +13,14 @@ namespace GameService.WebsocketsHelpers
     {
         WebSocket m_socket;
         Guid m_id;
+        string m_userName;
         TaskCompletionSource<object> m_websocketCompletion;
         IWebSocketMessageHandler m_handler;
         CancellationTokenSource m_readCancelToken = new CancellationTokenSource();
         CancellationTokenSource m_writeCancelToken = new CancellationTokenSource();
         object m_closeLock = new object();
         bool m_isClosed = false;
+        Thread m_readLoop;
 
         public BetterWebsocket(Guid id, WebSocket socket, TaskCompletionSource<object> tcs, IWebSocketMessageHandler handler)
         {
@@ -31,7 +33,9 @@ namespace GameService.WebsocketsHelpers
             // Otherwise the socket will be closed from under us.
             m_websocketCompletion = tcs;
 
-            ReadLoop();
+            // Start a new thread for the read loop.
+            m_readLoop = new Thread(ReadLoop);
+            m_readLoop.Start();
         }
 
         public Guid GetId()
@@ -61,7 +65,7 @@ namespace GameService.WebsocketsHelpers
                     }
 
                     // Handle the message
-                    string result = m_handler.OnMessage(this, Encoding.UTF8.GetString(message.ToArray()));
+                    string result = await m_handler.OnMessage(this, Encoding.UTF8.GetString(message.ToArray()));
 
                     // Send the result back.
                     Byte[] bytes = System.Text.Encoding.UTF8.GetBytes(result);
@@ -115,6 +119,23 @@ namespace GameService.WebsocketsHelpers
 
             // Inform the handler we are now closed.
             m_handler.OnClosed(this);
+
+            m_readLoop = null;
+        }
+
+        public bool HasUserName()
+        {
+            return !String.IsNullOrWhiteSpace(m_userName);
+        }
+
+        public string GetUserName()
+        {
+            return m_userName;
+        }
+
+        public void SetUserName(string str)
+        {
+            m_userName = str;
         }
     }
 }

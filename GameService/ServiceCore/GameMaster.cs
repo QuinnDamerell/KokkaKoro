@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using ServiceProtocol;
+using ServiceProtocol.Common;
 using ServiceProtocol.Requests;
 using ServiceProtocol.Responses;
 using System;
@@ -18,8 +19,9 @@ namespace GameService.ServiceCore
         {
             return s_instance;
         }
-
-        public KokkaKoroResponse<object> HandleCommand(string userId, string command)
+              
+        // Note userName can be null if the name hasn't been set yet. 
+        public async Task<KokkaKoroResponse<object>> HandleCommand(string userName, string command)
         {
             if(String.IsNullOrWhiteSpace(command))
             {
@@ -42,7 +44,7 @@ namespace GameService.ServiceCore
             }
 
             // Handle the command
-            KokkaKoroResponse<object> result = InternalHandleCommand(userId, request.Command, command);
+            KokkaKoroResponse<object> result = await InternalHandleCommand(userName, request.Command, command);
             if(result == null)
             {
                 result = KokkaKoroResponse<object>.CreateError("Internal Error; response null.");
@@ -53,19 +55,32 @@ namespace GameService.ServiceCore
             return result;
         }
 
-        private KokkaKoroResponse<object> InternalHandleCommand(string userId, KokkaKoroCommands command, string jsonStr)
+        private async Task<KokkaKoroResponse<object>> InternalHandleCommand(string userName, KokkaKoroCommands command, string jsonStr)
         {
+            // Check if this connection has a user name yet.
+            if(String.IsNullOrWhiteSpace(userName))
+            {
+                if(command != KokkaKoroCommands.SetUserName)
+                {
+                    return KokkaKoroResponse<object>.CreateError("A user name must be set before anything else.");
+                }
+            }
+
             // Handle the command.
             switch (command)
             {
+                case KokkaKoroCommands.SetUserName:
+                    return SetUserName(jsonStr);
                 case KokkaKoroCommands.CreateGame:
                     return CreateGame(jsonStr);
                 case KokkaKoroCommands.ListGames:
                     return ListGames(jsonStr);
+                case KokkaKoroCommands.ListBots:
+                    return await ListBots(jsonStr);
                 case KokkaKoroCommands.AddBot:
-                    return AddBot(jsonStr, userId);
+                    return await AddBot(jsonStr, userName);
                 case KokkaKoroCommands.StartGame:
-                    return StartGame(jsonStr, userId);
+                    return StartGame(jsonStr, userName);
             }
             return KokkaKoroResponse<object>.CreateError("Command not implemented.");
         }
@@ -216,7 +231,36 @@ namespace GameService.ServiceCore
 
         #region Player Management
 
-        private KokkaKoroResponse<object> AddBot(string command, string userId)
+        private KokkaKoroResponse<object> SetUserName(string command)
+        {
+            // Parse the request options
+            KokkaKoroRequest<SetUserNameOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<SetUserNameOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse options", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // We ingore the passcode for now.
+            if(request.CommandOptions == null || String.IsNullOrWhiteSpace(request.CommandOptions.UserName))
+            {
+                return KokkaKoroResponse<object>.CreateError("User name must be set in the options.");
+            }
+
+            // Set the user name. When we send this message back the websocket will look for it and
+            // pull the username out of it.
+            SetUserNameResponse response = new SetUserNameResponse()
+            {
+                AcceptedUserName = request.CommandOptions.UserName,
+            };
+            return KokkaKoroResponse<object>.CreateResult(response);
+        }
+
+        private async Task<KokkaKoroResponse<object>> AddBot(string command, string userId)
         {
             // Parse the request options
             KokkaKoroRequest<AddBotOptions> request;
@@ -239,7 +283,15 @@ namespace GameService.ServiceCore
             {
                 return KokkaKoroResponse<object>.CreateError("GameId is required.");
             }
-            
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.BotName))
+            {
+                return KokkaKoroResponse<object>.CreateError("BotName is required.");
+            }
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.InGameName))
+            {
+                return KokkaKoroResponse<object>.CreateError("InGameName is required.");
+            }
+
             // Find the game
             ServiceGame game = null;
             lock(m_currentGames)
@@ -259,15 +311,9 @@ namespace GameService.ServiceCore
             {
                 return KokkaKoroResponse<object>.CreateError("Invalid password for gameId.");
             }
-
-            string botName = "Carl";
-            if (!String.IsNullOrWhiteSpace(request.CommandOptions.BotName))
-            {
-                botName = request.CommandOptions.BotName;
-            }
-
+            
             // Try to add the bot.
-            string error = game.AddPlayer(botName, request.CommandOptions.BotId, null);
+            string error = await game.AddBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
             if (String.IsNullOrWhiteSpace(error))
             {
                 // Success, return the game info.
@@ -277,6 +323,32 @@ namespace GameService.ServiceCore
             else
             {
                 return KokkaKoroResponse<object>.CreateError($"Failed to add bot: {error}.");
+            }
+        }
+
+        #endregion
+
+        #region Bot Managment
+
+        private async Task<KokkaKoroResponse<object>> ListBots(string command)
+        {
+            ListBotsResponse result = new ListBotsResponse();
+            try
+            {
+                result.Bots = await StorageMaster.Get().ListBots();
+
+                // Null out the passwords
+                foreach(KokkaKoroBot info in result.Bots)
+                {
+                    info.Password = null;
+                }
+
+                // Return the results
+                return KokkaKoroResponse<object>.CreateResult(result);
+            }
+            catch (Exception e)
+            {
+                return KokkaKoroResponse<object>.CreateError($"Failed to list bots: {e.Message}");
             }
         }
 

@@ -9,28 +9,36 @@ namespace ServiceProtocol
 {
     public enum KokkaKoroCommands
     {
+        // Sets the user name for the connection.
+        [EnumMember(Value = "SetUserName")]
+        SetUserName = 0,
+
         // Returns a list of all games currently known of.
         [EnumMember(Value = "ListGames")]
-        ListGames   = 0,
+        ListGames = 1,
+
+        // Retuns a list of all bots we know of.
+        [EnumMember(Value = "ListBots")]
+        ListBots = 2,
 
         // Creates a new game with the CreateGameOptions class.
         [EnumMember(Value = "CreateGame")]
-        CreateGame = 1,
+        CreateGame = 3,
 
         // Adds a bot to a game
         [EnumMember(Value = "AddBot")]
-        AddBot = 2,
+        AddBot = 4,
 
         // Joins the current client as a live player.
         [EnumMember(Value = "JoinGame")]
-        JoinGame = 2,
+        JoinGame = 5,
 
         // Starts the given game.
         [EnumMember(Value = "StartGame")]
-        StartGame = 3,
+        StartGame = 6,
 
         [EnumMember(Value = "SpecateGame")]
-        SpecateGame = 4,
+        SpecateGame = 7,
     }
 
     public class KokkaKoroRequest<T>

@@ -15,7 +15,7 @@ namespace ServiceProtocol.Common
         // The name of this player, for this game.
         public string PlayerName;
 
-        // If this player is a bot, the bot ID
-        public Guid? BotId;
+        // If this player is a bot, the bot name
+        public string BotName;
     }
 }

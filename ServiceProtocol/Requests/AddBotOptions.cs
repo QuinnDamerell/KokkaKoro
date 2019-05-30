@@ -9,11 +9,11 @@ namespace ServiceProtocol.Requests
         // Required - The game id you want to add a bot to.
         public Guid GameId;
 
-        // Required - The bot id you want to add.
-        public Guid BotId;
-
-        // Optional - The name of the bot for this game.
+        // Required - The name of the bot you want to adds.
         public string BotName;
+
+        // Required - A fun name of this bot for in this game.
+        public string InGameName;
 
         // Optional - The password for the game (if there is one)
         public string Password;
