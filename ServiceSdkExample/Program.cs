@@ -11,38 +11,64 @@ namespace ServiceSdkExample
 {
     class Program
     {
-        static AutoResetEvent m_doneEvent;
-
         static void Main(string[] args)
         {
-            m_doneEvent = new AutoResetEvent(false);
-            DoWorkWrapper();
-            m_doneEvent.WaitOne();
+            AutoResetEvent doneEvent = new AutoResetEvent(false);
+            Example ex = new Example();
+            ex.WorkWrapper(doneEvent);
+            doneEvent.WaitOne();
         }
+    }
 
-        public static async void DoWorkWrapper()
+    class Example
+    {
+        int? localPort = null;
+
+        public async void WorkWrapper(AutoResetEvent doneEvent)
         {
             await DoWork();
-            m_doneEvent.Set();
+            doneEvent.Set();
         }
 
-        public static async Task DoWork()
+        public async Task DoWork()
         {
             // All of the SDK will throw if something goes wrong.
             try
             {
-                // Create a new service object
+                // Create a new service object. If the main websocket is every disconnected, it's required
+                // to make a new service object and reconnect.
                 Service kokkaKoroService = new Service();
 
-                // Turn on debugging
+                // Turn on debugging if desired.
                 kokkaKoroService.SetDebugging(false);
 
                 // Connect to the service
-                Console.WriteLine($"Connecting to service...");
-                await kokkaKoroService.ConnectAsync(51052);
-                Console.WriteLine($"");
+                Print("");
+                Print($"Connecting to {(localPort == null ? "" : "LOCAL")} service...");
+                await kokkaKoroService.ConnectAsync(localPort);
+                Print($"Connected!");
+                Print("");
+
+                Print("");
+                Print("Logging in...");
+                // The first thing we must do is login. We only need to so you have an identity.
+                // If you don't have an account, just login with the user name and password you want.
+                // If the user name doesn't already exist, it will created for you with the given password.
+                LoginOptions loginOptions = new LoginOptions()
+                {
+                    User = new KokkaKoroUser
+                    {
+                        UserName = "SdkExample",
+                        Passcode = "AGoodPasscode"
+                    }
+                };
+                await kokkaKoroService.Login(loginOptions);
+                Print("Logged in!");
+                Print("");
 
                 // Get a list of the current games.
+                Print("");
+                Print("Listing current games...");
                 List<KokkaKoroGame> games = await kokkaKoroService.ListGames();
                 Console.WriteLine($"Current games:");
                 foreach (KokkaKoroGame game in games)
@@ -50,18 +76,20 @@ namespace ServiceSdkExample
                     Console.WriteLine($"  {game.GameName} - Players {game.Players.Count}, {game.Id}");
                 }
                 Console.WriteLine($"");
-                Console.WriteLine($"");
 
                 // Get a list of the bots.
+                Print($"");
+                Print($"Listing hosted bots...");
                 List<KokkaKoroBot> bots = await kokkaKoroService.ListBots();
-                Console.WriteLine($"Current bots:");
+                Console.WriteLine($"Current hosted bots:");
                 foreach (KokkaKoroBot bot in bots)
                 {
                     Console.WriteLine($"  {bot.Name} - {bot.Major}.{bot.Minor}.{bot.Revision}");
                 }
-                Console.WriteLine($"");
-                Console.WriteLine($"");
+                Print($"");
 
+                Print($"");
+                Print($"Creating new game...");
                 // Create a new game
                 CreateGameOptions options = new CreateGameOptions()
                 {
@@ -69,10 +97,13 @@ namespace ServiceSdkExample
                     CreatedBy = "Example SDK"
                 };
                 KokkaKoroGame newGame = await kokkaKoroService.CreateGame(options);
-                Console.WriteLine($"Game Created: {newGame.GameName} - Players {newGame.Players.Count}, {newGame.Id}");
+                Print($"Game Created: {newGame.GameName} - Players {newGame.Players.Count}, {newGame.Id}");
+                Print($"");
 
+                Print();
+                Print("Adding a hosted bot to the game...");
                 // Add bots to the game we just made.
-                AddBotOptions botsOpts = new AddBotOptions()
+                AddHostedBotOptions botsOpts = new AddHostedBotOptions()
                 {
                     BotName = "TestBot",
                     InGameName = "Quinn",
@@ -80,8 +111,11 @@ namespace ServiceSdkExample
                 };
                 newGame = await kokkaKoroService.AddBotToGame(botsOpts);
                 Console.WriteLine($"Bot {botsOpts.BotName} added! : {newGame.GameName} - Players {newGame.Players.Count}, {newGame.Id}");
+                Print();
 
-                botsOpts = new AddBotOptions()
+                Print();
+                Print("Adding another hosted bot to the game...");
+                botsOpts = new AddHostedBotOptions()
                 {
                     BotName = "TestBot",
                     InGameName = "Marilyn",
@@ -89,8 +123,11 @@ namespace ServiceSdkExample
                 };
                 newGame = await kokkaKoroService.AddBotToGame(botsOpts);
                 Console.WriteLine($"Bot {botsOpts.BotName} added! : {newGame.GameName} - Players {newGame.Players.Count}, {newGame.Id}");
+                Print();
 
                 // Now start the game.
+                Print();
+                Print("Starting the game...");
                 StartGameOptions startGameOpts = new StartGameOptions()
                 {
                     GameId = newGame.Id
@@ -102,17 +139,28 @@ namespace ServiceSdkExample
             {
                 Console.WriteLine("");
                 Console.WriteLine("");
-                Console.WriteLine("!! ERROR !!");
-                Console.WriteLine($"   Message:{e.Message}");
+                Console.WriteLine("Error!!");
+                Console.WriteLine($"   Message: {e.Message}");
                 Console.WriteLine($"   Was From Service? {e.IsFromService()}");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("");
                 Console.WriteLine("");
-                Console.WriteLine("!! ERROR !!");
-                Console.WriteLine($"   Message:{e.Message}");
+                Console.WriteLine("Error!");
+                Console.WriteLine($"   Message: {e.Message}");
             }
+
+            Print();
+            Print();
+            Print("Done! Goodbye!");
+            Print();
+            Print();
+        }
+
+        public void Print(string msg = "")
+        {
+            Console.WriteLine(msg);
         }
     }
 }

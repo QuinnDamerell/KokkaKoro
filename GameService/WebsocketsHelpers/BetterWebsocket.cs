@@ -16,6 +16,7 @@ namespace GameService.WebsocketsHelpers
         string m_userName;
         TaskCompletionSource<object> m_websocketCompletion;
         IWebSocketMessageHandler m_handler;
+
         CancellationTokenSource m_readCancelToken = new CancellationTokenSource();
         CancellationTokenSource m_writeCancelToken = new CancellationTokenSource();
         object m_closeLock = new object();
@@ -28,7 +29,7 @@ namespace GameService.WebsocketsHelpers
             m_id = id;
             m_handler = handler;
 
-            // Due to the way kestrel handles websockets/
+            // Due to the way kestrel handles websockets
             // we need to block the middleware function that called us until the socket is done.
             // Otherwise the socket will be closed from under us.
             m_websocketCompletion = tcs;
@@ -36,11 +37,6 @@ namespace GameService.WebsocketsHelpers
             // Start a new thread for the read loop.
             m_readLoop = new Thread(ReadLoop);
             m_readLoop.Start();
-        }
-
-        public Guid GetId()
-        {
-            return m_id;
         }
 
         private async void ReadLoop()
@@ -120,7 +116,13 @@ namespace GameService.WebsocketsHelpers
             // Inform the handler we are now closed.
             m_handler.OnClosed(this);
 
+            // Lose the ref to the read loop thread.
             m_readLoop = null;
+        }
+
+        public Guid GetId()
+        {
+            return m_id;
         }
 
         public bool HasUserName()

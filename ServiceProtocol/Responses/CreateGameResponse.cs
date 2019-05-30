@@ -5,9 +5,9 @@ using System.Text;
 
 namespace ServiceProtocol.Responses
 {
-    public class AddBotResponse
+    public class CreateGameResponse
     {
-        // The updated details of the game we added a bot to.
+        // The newly created game information.
         public KokkaKoroGame Game;
     }
 }

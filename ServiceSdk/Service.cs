@@ -62,27 +62,30 @@ namespace KokkaKoro
 
         #region User Stuff
 
-        public async Task<string> SetUserName(SetUserNameOptions options)
+        public async Task Login(LoginOptions options)
         {
-            if (options == null)
+            if (options == null || options.User == null)
             {
                 throw new KokkaKoroException("Options are required!", false);
             }
-            if (String.IsNullOrWhiteSpace(options.UserName))
+            if (String.IsNullOrWhiteSpace(options.User.UserName))
             {
                 throw new KokkaKoroException("A user name is required!", false);
+            }
+            if (String.IsNullOrWhiteSpace(options.User.Passcode))
+            {
+                throw new KokkaKoroException("A passcode is required!", false);
             }
 
             // Build the request
             KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
             {
-                Command = KokkaKoroCommands.SetUserName,
+                Command = KokkaKoroCommands.Login,
                 CommandOptions = options
             };
 
-            KokkaKoroResponse<SetUserNameResponse> response = await MakeRequest<SetUserNameResponse>(request, "set user name");
-
-            return response.Data.AcceptedUserName;
+            // Make the request.
+            await MakeRequest<LoginResponse>(request, "set user name");
         }
 
         #endregion
@@ -95,9 +98,9 @@ namespace KokkaKoro
             {
                 throw new KokkaKoroException("Options are required!", false);
             }
-            if(String.IsNullOrWhiteSpace(options.GameName) || String.IsNullOrWhiteSpace(options.CreatedBy))
+            if(String.IsNullOrWhiteSpace(options.GameName))
             {
-                throw new KokkaKoroException("GameName and CreatedBy are required!", false);
+                throw new KokkaKoroException("GameName is required!", false);
             }
 
             // Build the request
@@ -177,7 +180,7 @@ namespace KokkaKoro
             return bots;
         }
 
-        public async Task<KokkaKoroGame> AddBotToGame(AddBotOptions options)
+        public async Task<KokkaKoroGame> AddBotToGame(AddHostedBotOptions options)
         {
             if (options == null)
             {
@@ -195,12 +198,12 @@ namespace KokkaKoro
             // Build the request
             KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
             {
-                Command = KokkaKoroCommands.AddBot,
+                Command = KokkaKoroCommands.AddHostedBot,
                 CommandOptions = options
             };
 
             // Make the request and validate.
-            KokkaKoroResponse<AddBotResponse> response = await MakeRequest<AddBotResponse>(request, "add bot");
+            KokkaKoroResponse<AddHostedBotResponse> response = await MakeRequest<AddHostedBotResponse>(request, "add bot");
 
             // Pull out the list to return.
             return response.Data.Game;

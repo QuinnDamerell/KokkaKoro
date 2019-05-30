@@ -21,6 +21,8 @@ namespace GameService.ServiceCore
             return s_storage;
         }
 
+        #region Bots
+
         public async Task<List<KokkaKoroBot>> ListBots()
         {
             // Get all of the bot files
@@ -30,9 +32,6 @@ namespace GameService.ServiceCore
 
         public async Task<ServiceBot> DownloadBot(string botName)
         {
-            // Get the blob storage
-            CloudBlobContainer container = GetBlob();
-
             // Get all items in the folder.
             List<IListBlobItem> items = await GetAllBotFiles(botName);
 
@@ -174,17 +173,94 @@ namespace GameService.ServiceCore
             return items;
         }
 
-        private CloudBlobContainer GetBlob()
+        #endregion Bots
+
+        #region Users
+
+        static readonly string s_userFile = "Users.json";
+
+        public class UserHolder
+        {
+            public List<KokkaKoroUser> Users;
+        }
+
+        public async Task<List<KokkaKoroUser>> GetUserList()
+        {
+            // Get the user block.
+            CloudBlockBlob userBlock = await GetUserBlock();
+
+            // Convert
+            UserHolder holder = JsonConvert.DeserializeObject<UserHolder>(await userBlock.DownloadTextAsync());
+            if (holder == null || holder.Users == null)
+            {
+                throw new Exception("Failed to parse user holder");
+            }
+
+            // Validate
+            List<KokkaKoroUser> users = new List<KokkaKoroUser>();
+            foreach (KokkaKoroUser u in holder.Users)
+            {
+                if (u.IsValid())
+                {
+                    users.Add(u);
+                }
+            }
+            return users;
+        }
+
+        public async Task SetUserList(List<KokkaKoroUser> users)
+        {
+            // Convert
+            string json = JsonConvert.SerializeObject(new UserHolder() { Users = users });
+            if (String.IsNullOrWhiteSpace(json))
+            {
+                throw new Exception("Failed to serialize users.");
+            }
+
+            // Get the block.
+            CloudBlockBlob userBlock = await GetUserBlock();
+
+            // Write
+            await userBlock.UploadTextAsync(json);
+        }
+
+        private async Task<CloudBlockBlob> GetUserBlock()
+        {
+            // Get the blob storage
+            CloudBlobContainer container = GetBlob("users");
+
+            // Get all items in the folder.
+            BlobContinuationToken token = new BlobContinuationToken();
+            while (token != null)
+            {
+                BlobResultSegment result = await container.ListBlobsSegmentedAsync("", true, BlobListingDetails.None, 5, token, null, null);
+                foreach (IListBlobItem item in result.Results)
+                {
+                    if (item is CloudBlockBlob blockBlob)
+                    {
+                        if (blockBlob.Name == s_userFile)
+                        {
+                            return blockBlob;
+                        }
+                    }
+                }
+            }
+            throw new Exception("Failed to find blob user file.");
+        }
+
+        #endregion
+
+        private CloudBlobContainer GetBlob(string containerName = null)
         {
             string storageConnectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
 
-            // Parse the storage acount
+            // Parse the storage account
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(storageConnectionString);          
 
             // Create the CloudBlobClient that represents the Blob storage endpoint for the storage account.
             CloudBlobClient cloudBlobClient = storageAccount.CreateCloudBlobClient();
 
-            return cloudBlobClient.GetContainerReference("general");
+            return cloudBlobClient.GetContainerReference(containerName == null ? "general" : containerName);
         }        
     }
 }

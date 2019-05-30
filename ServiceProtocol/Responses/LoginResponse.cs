@@ -5,10 +5,10 @@ using System.Text;
 
 namespace ServiceProtocol.Responses
 {
-    public class SetUserNameResponse
+    public class LoginResponse
     {
         // Returns the user name that was accepted.
         // (this will always be what was sent)
-        public string AcceptedUserName;
+        public string UserName;
     }
 }

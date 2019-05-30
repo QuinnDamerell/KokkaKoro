@@ -4,12 +4,12 @@ using System.Text;
 
 namespace ServiceProtocol.Requests
 {
-    public class AddBotOptions
+    public class AddHostedBotOptions
     {
         // Required - The game id you want to add a bot to.
         public Guid GameId;
 
-        // Required - The name of the bot you want to adds.
+        // Required - The name of the bot you want to add.
         public string BotName;
 
         // Required - A fun name of this bot for in this game.

@@ -8,16 +8,16 @@ using System.Text;
 namespace ServiceProtocol
 {
     public enum KokkaKoroCommands
-    {
-        // Sets the user name for the connection.
-        [EnumMember(Value = "SetUserName")]
-        SetUserName = 0,
+    {        
+        // Logs the user in for the given connection.
+        [EnumMember(Value = "Login")]
+        Login = 0,
 
         // Returns a list of all games currently known of.
         [EnumMember(Value = "ListGames")]
         ListGames = 1,
 
-        // Retuns a list of all bots we know of.
+        // Returns a list of all bots we know of.
         [EnumMember(Value = "ListBots")]
         ListBots = 2,
 
@@ -25,9 +25,9 @@ namespace ServiceProtocol
         [EnumMember(Value = "CreateGame")]
         CreateGame = 3,
 
-        // Adds a bot to a game
-        [EnumMember(Value = "AddBot")]
-        AddBot = 4,
+        // Adds a hosted bot to a game.
+        [EnumMember(Value = "AddHostedBot")]
+        AddHostedBot = 4,
 
         // Joins the current client as a live player.
         [EnumMember(Value = "JoinGame")]
@@ -50,7 +50,7 @@ namespace ServiceProtocol
         // A unique request id that can be used to match a response.
         public int RequestId;
 
-        // The object that will hold options depeding on the command type.
+        // The object that will hold options depending on the command type.
         public T CommandOptions;
 
         //

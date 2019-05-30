@@ -14,7 +14,7 @@ namespace GameService
     public class CommandController : Controller
     {
         public static string CookieUserId = "UserName";
-        public static string GetUserId(HttpRequest req, HttpResponse response)
+        public static string GetUserName(HttpRequest req, HttpResponse response)
         {
             // Get the user's id
             string userId = null;
@@ -56,10 +56,10 @@ namespace GameService
 
         private async Task<IActionResult> Handle(string command)
         {
-            string userId = GetUserId(Request, Response);
+            string userName = GetUserName(Request, Response);
 
             // Handle the response
-            KokkaKoroResponse<object> result = await GameMaster.Get().HandleCommand(userId, command);
+            KokkaKoroResponse<object> result = await GameMaster.Get().HandleCommand(userName, command);
             if (String.IsNullOrWhiteSpace(result.Error))
             {
                 return Ok(result);

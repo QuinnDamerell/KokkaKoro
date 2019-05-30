@@ -26,7 +26,7 @@ namespace GameService.WebsocketsHelpers
         }
 
         // A list of active connections.
-        // Note we use the GUID here because we let multiple connections use the same username.
+        // Note we use the GUID here because we let multiple connections use the same user name.
         Dictionary<Guid, BetterWebsocket> m_activeConnections = new Dictionary<Guid, BetterWebsocket>();
 
         public void NewConnection(WebSocket socket, TaskCompletionSource<object> tcs)
@@ -48,13 +48,13 @@ namespace GameService.WebsocketsHelpers
             // Send the message to the command handler
             KokkaKoroResponse<object> result = await GameMaster.Get().HandleCommand(bsock.GetUserName(), message);
 
-            // If we see a user name accpeted mesasge returned, grab the user name.
-            if(result.Data != null && result.Data is SetUserNameResponse setUserName)
+            // If we see a user name accepted message returned, grab the user name.
+            if(result.Data != null && result.Data is LoginResponse loginResponse)
             {
-                bsock.SetUserName(setUserName.AcceptedUserName);
+                bsock.SetUserName(loginResponse.UserName);
             }
 
-            // Seralize the response and return it.
+            // Serialize the response and return it.
             return JsonConvert.SerializeObject(result);            
         }
 

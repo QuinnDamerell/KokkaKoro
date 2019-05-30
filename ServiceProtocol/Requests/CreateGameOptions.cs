@@ -9,9 +9,6 @@ namespace ServiceProtocol.Requests
         // Required - Give your game a fun name!
         public string GameName;
 
-        // Required - Tell us who you are!
-        public string CreatedBy;
-
         // Optional - Max number of players 
         public int? PlayerLimit;
 
