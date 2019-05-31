@@ -14,6 +14,10 @@ namespace ServiceProtocol.Common
         [EnumMember(Value = "Lobby")]
         Lobby,
 
+        // The game is started, but waiting for hosted bots to connect.
+        [EnumMember(Value = "WaitingForHostedBots")]
+        WaitingForHostedBots,
+
         // The game is in progress
         [EnumMember(Value = "InProgress")]
         InProgress,

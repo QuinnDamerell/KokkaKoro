@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GameService.ServiceCore
@@ -27,6 +28,7 @@ namespace GameService.ServiceCore
         DateTime m_createdAt;
 
         List<ServicePlayer> m_players = new List<ServicePlayer>();
+        Thread m_gameLoop = null;
 
         public ServiceGame(int? playerLimit = null, string gameName = null, string createdBy = null, string password = null, TimeSpan? turnTimeLimit = null, TimeSpan? minTurnLimit = null, TimeSpan? gameTimeLimit = null)
         {
@@ -131,10 +133,12 @@ namespace GameService.ServiceCore
                 {
                     return "Invalid state to start game";
                 }
-                m_state = KokkaKoroGameState.InProgress;
+                m_state = KokkaKoroGameState.WaitingForHostedBots;
             }
 
-            // TODO STUFF
+            // Kick off the game loop thread to run the game.
+            m_gameLoop = new Thread(GameLoop);
+            m_gameLoop.Start();
 
             return null;
         }
@@ -165,6 +169,25 @@ namespace GameService.ServiceCore
                 GameTimeLimitSeconds = m_gameTimeLmit.TotalSeconds,
                 Created = m_createdAt
             };
+        }
+
+        private void GameLoop()
+        {
+            // First of all, start all of the bots in the game.
+            lock(m_pl)
+            foreach(ServicePlayer player in m_players)
+            {
+
+            }
+
+
+
+            
+        }
+
+        private void StartBots()
+        {
+
         }
     }
 }

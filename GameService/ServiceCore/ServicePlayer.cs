@@ -16,9 +16,9 @@ namespace GameService.ServiceCore
         // Bot only stuff.
         bool m_isReady = false;
         string m_inGameName;
-        ServiceBot 
-            = null;
+        ServiceBot m_bot = null;
 
+        // Bot constructor
         public ServicePlayer(ServiceBot bot, string inNameGame)
         {
             m_inGameName = inNameGame;
@@ -28,6 +28,7 @@ namespace GameService.ServiceCore
             m_userName = Guid.NewGuid().ToString();
         }
 
+        // Real user constructor
         public ServicePlayer(string userName)
         {
             m_userName = userName;

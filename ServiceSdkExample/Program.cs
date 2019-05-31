@@ -22,7 +22,7 @@ namespace ServiceSdkExample
 
     class Example
     {
-        int? localPort = null;
+        int? localPort = 5000;
 
         public async void WorkWrapper(AutoResetEvent doneEvent)
         {
@@ -93,8 +93,7 @@ namespace ServiceSdkExample
                 // Create a new game
                 CreateGameOptions options = new CreateGameOptions()
                 {
-                    GameName = "SDK Example Game",
-                    CreatedBy = "Example SDK"
+                    GameName = "SDK Example Game"
                 };
                 KokkaKoroGame newGame = await kokkaKoroService.CreateGame(options);
                 Print($"Game Created: {newGame.GameName} - Players {newGame.Players.Count}, {newGame.Id}");
