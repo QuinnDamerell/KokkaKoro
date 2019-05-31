@@ -74,14 +74,14 @@ namespace GameService.ServiceCore
             return m_password.Equals(userPassword);
         }
 
-        public async Task<string> AddBot(string inGameName, string botName)
+        public async Task<string> AddHostedBot(string inGameName, string botName)
         {
             if(String.IsNullOrWhiteSpace(inGameName) || String.IsNullOrWhiteSpace(botName))
             {
                 return "No bot name or in game name specified.";
             }
 
-            // Downlaod the bot locally.
+            // Download the bot locally.
             ServiceBot bot;
             try
             {

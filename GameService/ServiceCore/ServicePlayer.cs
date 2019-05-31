@@ -8,25 +8,34 @@ namespace GameService.ServiceCore
 {
     public class ServicePlayer
     {
+        static readonly string s_botPassword = "IamABot";
+
+        // Shared for both bots and real users.
+        string m_userName;
+
+        // Bot only stuff.
+        bool m_isReady = false;
         string m_inGameName;
-        ServiceBot m_bot;
-        Guid? m_userId;
+        ServiceBot 
+            = null;
 
         public ServicePlayer(ServiceBot bot, string inNameGame)
         {
             m_inGameName = inNameGame;
             m_bot = bot;
+
+            // For bots the user name must be unique so they can join the games.
+            m_userName = Guid.NewGuid().ToString();
         }
 
-        public ServicePlayer(Guid userId, string inNameGame)
+        public ServicePlayer(string userName)
         {
-            m_userId = userId;
-            m_inGameName = inNameGame;
+            m_userName = userName;
         }
 
         public string GetInGameName()
         {
-            return m_inGameName;
+            return m_bot != null ? m_inGameName : m_userName;
         }
 
         public KokkaKoroPlayer GetInfo()

@@ -333,7 +333,7 @@ namespace GameService.ServiceCore
             }
             
             // Try to add the bot.
-            string error = await game.AddBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
+            string error = await game.AddHostedBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
             if (String.IsNullOrWhiteSpace(error))
             {
                 // Success, return the game info.
