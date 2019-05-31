@@ -10,18 +10,16 @@ namespace GameService.ServiceCore
     {
         static readonly string s_botPassword = "IamABot";
 
-        // Shared for both bots and real users.
+        // For bots, this is the inGame name. For real users, this is the username.
         string m_userName;
 
         // Bot only stuff.
-        bool m_isReady = false;
-        string m_inGameName;
         ServiceBot m_bot = null;
 
         // Bot constructor
         public ServicePlayer(ServiceBot bot, string inNameGame)
         {
-            m_inGameName = inNameGame;
+            m_userName = inNameGame;
             m_bot = bot;
 
             // For bots the user name must be unique so they can join the games.
@@ -34,18 +32,37 @@ namespace GameService.ServiceCore
             m_userName = userName;
         }
 
+        public void StartBot()
+        {
+            if(!IsBot())
+            {
+                return;
+            }
+            m_bot.StartBot();
+        }
+
+        public bool IsBot()
+        {
+            return m_bot != null;
+        }
+
+        public string GetBotName()
+        {
+            return m_bot == null ? null : m_bot.GetBotName();
+        }
+
         public string GetInGameName()
         {
-            return m_bot != null ? m_inGameName : m_userName;
+            return m_userName;
         }
 
         public KokkaKoroPlayer GetInfo()
         {
             return new KokkaKoroPlayer()
             {
-                BotName = m_bot == null ? null : m_bot.GetBotName(),
-                IsBot = m_bot != null,
-                PlayerName = m_inGameName
+                BotName = GetBotName(),
+                IsBot = IsBot(),
+                PlayerName = m_userName
             };
         }
     }

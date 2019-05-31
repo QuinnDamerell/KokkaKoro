@@ -1,4 +1,6 @@
-﻿using ServiceProtocol.Common;
+﻿using ServiceProtocol;
+using ServiceProtocol.Common;
+using ServiceProtocol.Responses;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,6 +28,8 @@ namespace GameService.ServiceCore
         TimeSpan m_turnTimeLimit;
         TimeSpan m_gameTimeLmit;
         DateTime m_createdAt;
+
+        string m_fatalError = null;
 
         List<ServicePlayer> m_players = new List<ServicePlayer>();
         Thread m_gameLoop = null;
@@ -76,11 +80,24 @@ namespace GameService.ServiceCore
             return m_password.Equals(userPassword);
         }
 
-        public async Task<string> AddHostedBot(string inGameName, string botName)
+        public async Task<KokkaKoroResponse<object>> AddHostedBot(string inGameName, string botName)
         {
             if(String.IsNullOrWhiteSpace(inGameName) || String.IsNullOrWhiteSpace(botName))
             {
-                return "No bot name or in game name specified.";
+                return KokkaKoroResponse<object>.CreateError("No bot name or in game name specified.");
+            }
+
+            // Do a quick state check.
+            lock(m_gameLock)
+            {
+                if (m_state != KokkaKoroGameState.Lobby)
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
+                }               
+                if (m_players.Count() >= m_playerLimit)
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game full");
+                }
             }
 
             // Download the bot locally.
@@ -91,33 +108,64 @@ namespace GameService.ServiceCore
             }
             catch(Exception e)
             {
-                return $"Failed to load bot: {e.Message}";
+                return KokkaKoroResponse<object>.CreateError($"Failed to load bot: {e.Message}");
             }     
             
             lock(m_gameLock)
             {
-                // Check the state
+                // Check the state again.
                 if (m_state != KokkaKoroGameState.Lobby)
                 {
-                    return "Game not in joinable state.";
+                    return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
+                }
+                if (m_players.Count() >= m_playerLimit)
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game full");
                 }
 
                 // Make sure the name is unique, for fun.
-                if (m_players.Count() >= m_playerLimit)
+                int count = 0;
+                while(count < m_players.Count())
                 {
-                    return "Game full";
-                }
-                foreach (ServicePlayer player in m_players)
-                {
-                    if (inGameName == player.GetInGameName())
+                    if(m_players[count].GetInGameName() == inGameName)
                     {
-                        inGameName += "est";
+                        // Append an ending and restart.
+                        Random r = new Random();
+                        switch(r.Next(0, 5))
+                        {
+                            case 0:
+                                inGameName += "est";
+                                break;
+                            case 1:
+                                inGameName += "er";
+                                break;
+                            case 2:
+                                inGameName = "Dr "+ inGameName;
+                                break;
+                            case 3:
+                                inGameName += " the second";
+                                break;
+                            case 4:
+                                inGameName += " the great";
+                                break;
+                        }
+                        count = 0;
                     }
+                    count++;
                 }
+
+                // Add the player.
                 m_players.Add(new ServicePlayer(bot, inGameName));                
             }
-      
-            return null;
+
+            // Create a response
+            AddHostedBotResponse response = new AddHostedBotResponse()
+            {
+                Game = GetInfo(),
+                Bot = bot.GetBotInfo(),
+                WasInCache = bot.WasInCache(),
+            };      
+            return KokkaKoroResponse<object>.CreateResult(response);
         }
 
         public string StartGame()
@@ -173,21 +221,54 @@ namespace GameService.ServiceCore
 
         private void GameLoop()
         {
-            // First of all, start all of the bots in the game.
-            lock(m_pl)
-            foreach(ServicePlayer player in m_players)
+            try
             {
-
+                InnerGameLoop();
+            }
+            catch(Exception e)
+            {
+                Logger.Error("Excption in game loop.", e);
+                SetFatalError($"Exception thrown in game loop. {e.Message}");
             }
 
-
-
-            
+            // Make sure our state is set.
+            lock (m_gameLock)
+            {
+                m_state = KokkaKoroGameState.Complete;
+            }            
         }
 
-        private void StartBots()
+        private void InnerGameLoop()
         {
+            lock(m_gameLock)
+            {
+                if(m_state != KokkaKoroGameState.WaitingForHostedBots)
+                {
+                    SetFatalError("Wrong inital state.");
+                    return;
+                }
+            }
 
+            // Spawn the bot players.
+            foreach(ServicePlayer p in m_players)
+            {
+                if(p.IsBot())
+                {
+                    p.StartBot();
+                }
+            }
+
+            // Wait for the bots to connect.
+
+
+        }
+
+        private void SetFatalError(string err)
+        {
+            if(String.IsNullOrWhiteSpace(err))
+            {
+                m_fatalError = err;
+            }
         }
     }
 }

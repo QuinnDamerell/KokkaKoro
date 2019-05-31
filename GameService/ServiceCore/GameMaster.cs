@@ -333,17 +333,7 @@ namespace GameService.ServiceCore
             }
             
             // Try to add the bot.
-            string error = await game.AddHostedBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
-            if (String.IsNullOrWhiteSpace(error))
-            {
-                // Success, return the game info.
-                AddHostedBotResponse resp = new AddHostedBotResponse { Game = game.GetInfo() };
-                return KokkaKoroResponse<object>.CreateResult(resp);
-            }
-            else
-            {
-                return KokkaKoroResponse<object>.CreateError($"Failed to add bot: {error}.");
-            }
+            return await game.AddHostedBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
         }
 
         #endregion

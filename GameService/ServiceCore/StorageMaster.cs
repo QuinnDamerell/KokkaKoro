@@ -79,7 +79,7 @@ namespace GameService.ServiceCore
                     if(local.Equals(info))
                     {
                         // We have the current version locally, so just use it.
-                        return new ServiceBot(info, localBotPath);
+                        return new ServiceBot(info, localBotPath, true);
                     }
                 }
             }
@@ -119,7 +119,7 @@ namespace GameService.ServiceCore
                 throw e;
             }
 
-            return new ServiceBot(info, localBotPath);
+            return new ServiceBot(info, localBotPath, false);
         }
 
         private async Task<KokkaKoroBot> GetBotInfoObject(CloudBlockBlob block)

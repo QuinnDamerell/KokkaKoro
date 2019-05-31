@@ -9,5 +9,11 @@ namespace ServiceProtocol.Responses
     {
         // The updated details of the game we added a bot to.
         public KokkaKoroGame Game;
+
+        // Indicates if the bot was loaded from the local cache.
+        public bool WasInCache;
+
+        // The bot details
+        public KokkaKoroBot Bot;
     }
 }
