@@ -16,10 +16,6 @@ namespace KokkaKoro
     {
         KokkaKoroClientWebsocket m_websocket;
 
-        public Service()
-        {
-        }
-
         public void SetDebugging(bool state)
         {
             Logger.SetDebug(state);
@@ -135,12 +131,42 @@ namespace KokkaKoro
             return games;
         }
 
+        public async Task<KokkaKoroGame> JoinGame(JoinGameOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if(options.GameId.Equals(Guid.Empty))
+            {
+                throw new KokkaKoroException("A GameId is required.!", false);
+            }
+
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.JoinGame,
+                CommandOptions = options
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<JoinGameResponse> response = await MakeRequest<JoinGameResponse>(request, "join game");
+
+            // Pull out the list to return.
+            return response.Data.Game;
+        }
+
         public async Task<KokkaKoroGame> StartGame(StartGameOptions options)
         {
             if (options == null)
             {
                 throw new KokkaKoroException("Options are required!", false);
             }
+            if (options.GameId.Equals(Guid.Empty))
+            {
+                throw new KokkaKoroException("A GameId is required.!", false);
+            }
+
 
             // Build the request
             KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
@@ -193,6 +219,10 @@ namespace KokkaKoro
             if (String.IsNullOrWhiteSpace(options.InGameName))
             {
                 throw new KokkaKoroException("InGameName is required!", false);
+            }
+            if (options.GameId.Equals(Guid.Empty))
+            {
+                throw new KokkaKoroException("A GameId is required.!", false);
             }
 
             // Build the request

@@ -79,6 +79,8 @@ namespace GameService.ServiceCore
                     return await ListBots(jsonStr);
                 case KokkaKoroCommands.AddHostedBot:
                     return await AddHostedBot(jsonStr);
+                case KokkaKoroCommands.JoinGame:
+                    return JoinGame(jsonStr, userName);
                 case KokkaKoroCommands.StartGame:
                     return StartGame(jsonStr);
             }
@@ -312,28 +314,74 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError("InGameName is required.");
             }
 
+            // Try to find and validate the game.
+            (ServiceGame game, KokkaKoroResponse<object> error) = GetGame(request.CommandOptions.GameId, request.CommandOptions.Password);
+            if (error != null)
+            {
+                return error;
+            }
+
+            // Try to add the bot.
+            return await game.AddHostedBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
+        }
+
+        private KokkaKoroResponse<object> JoinGame(string command, string userName)
+        {
+            // Parse the request options
+            KokkaKoroRequest<JoinGameOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<JoinGameOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse join game", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // Validate
+            if (request.CommandOptions == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (request.CommandOptions.GameId.Equals(Guid.Empty))
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId is required.");
+            }
+
+            // Try to find and validate the game.
+            (ServiceGame game, KokkaKoroResponse<object> error) = GetGame(request.CommandOptions.GameId, request.CommandOptions.Password);
+            if(error != null)
+            {
+                return error;
+            }
+
+            // Try to join the game!
+            return game.JoinGame(userName);
+        }
+
+        private (ServiceGame, KokkaKoroResponse<object>) GetGame(Guid gameId, string password)
+        {
             // Find the game
             ServiceGame game = null;
-            lock(m_currentGames)
+            lock (m_currentGames)
             {
-                if(m_currentGames.ContainsKey(request.CommandOptions.GameId))
+                if (m_currentGames.ContainsKey(gameId))
                 {
-                    game = m_currentGames[request.CommandOptions.GameId];
+                    game = m_currentGames[gameId];
                 }
             }
-            if(game == null)
+            if (game == null)
             {
-                return KokkaKoroResponse<object>.CreateError("GameId not found.");
+                return (null, KokkaKoroResponse<object>.CreateError("GameId not found."));
             }
 
             // Validate the password (if there is one)
-            if(!game.ValidatePassword(request.CommandOptions.Password))
+            if (!game.ValidatePassword(password))
             {
-                return KokkaKoroResponse<object>.CreateError("Invalid password for gameId.");
+                return (null, KokkaKoroResponse<object>.CreateError("The password is incorrect for the game."));
             }
-            
-            // Try to add the bot.
-            return await game.AddHostedBot(request.CommandOptions.InGameName, request.CommandOptions.BotName);
+            return (game, null);
         }
 
         #endregion

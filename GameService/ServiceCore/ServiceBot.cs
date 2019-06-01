@@ -14,8 +14,8 @@ namespace GameService.ServiceCore
         NotStarted,
         // The process has been started, but the bot hasn't connected
         Starting,
-        // The bot is connected to the game.
-        Connected,
+        // The bot is joined to the game.
+        Joined,
         // The process is being killed
         Terminated,
         // The process is dead and done cleaning up.
@@ -83,7 +83,7 @@ namespace GameService.ServiceCore
                 SetFatalError(msg);
             }
 
-            // Udpate the state
+            // Update the state
             lock (m_stateLock)
             {
                 m_state = ServiceBotState.Terminated;
@@ -108,7 +108,7 @@ namespace GameService.ServiceCore
             }
             catch { }
 
-            // Udpate the state
+            // Update the state
             lock (m_stateLock)
             {
                 m_state = ServiceBotState.CleanedUp;
@@ -135,7 +135,7 @@ namespace GameService.ServiceCore
             process.Start();
 
             // Wait for the process to die.
-            while(m_state == ServiceBotState.Starting || m_state == ServiceBotState.Connected)
+            while(m_state == ServiceBotState.Starting || m_state == ServiceBotState.Joined)
             {
                 // Wake up every 500ms to check state.
                 process.WaitForExit(500);
@@ -175,9 +175,21 @@ namespace GameService.ServiceCore
             }
         }
 
+        public void SetBotJoined()
+        {
+            lock(m_stateLock)
+            {
+                // Only move to joined if we are currently starting.
+                if(m_state == ServiceBotState.Starting)
+                {
+                    m_state = ServiceBotState.Joined;
+                }
+            }
+        }
+
         public bool GetIsReady()
         {
-            return m_state == ServiceBotState.Connected;
+            return m_state == ServiceBotState.Joined;
         }
 
         private string GetExePath()

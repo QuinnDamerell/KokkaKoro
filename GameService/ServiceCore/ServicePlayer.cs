@@ -10,16 +10,18 @@ namespace GameService.ServiceCore
     {
         static readonly string s_botPassword = "IamABot";
 
-        // For bots, this is the inGame name. For real users, this is the username.
+        // For hosted bots, this is a GUID we make that we will give to the bot for them to connect with.
+        // For remote players, this is the actual username.
         string m_userName;
 
         // Bot only stuff.
         ServiceBot m_bot = null;
+        string m_inGameName;
 
         // Bot constructor
         public ServicePlayer(ServiceBot bot, string inNameGame)
         {
-            m_userName = inNameGame;
+            m_inGameName = inNameGame;
             m_bot = bot;
 
             // For bots the user name must be unique so they can join the games.
@@ -41,6 +43,15 @@ namespace GameService.ServiceCore
             m_bot.StartBot();
         }
 
+        public void SetBotJoined()
+        {
+            if(!IsBot())
+            {
+                return;
+            }
+            m_bot.SetBotJoined();
+        }
+
         public bool IsBot()
         {
             return m_bot != null;
@@ -52,6 +63,11 @@ namespace GameService.ServiceCore
         }
 
         public string GetInGameName()
+        {
+            return m_inGameName;
+        }
+
+        public string GetUserName()
         {
             return m_userName;
         }

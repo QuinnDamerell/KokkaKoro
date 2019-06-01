@@ -21,7 +21,7 @@ namespace ServiceProtocol.Requests
         // Optional - The max time a turn is allowed to take.
         public int? TurnTimeLmitSeconds;
 
-        // Optional - The minium amount of time a turn can take.
+        // Optional - The minimum amount of time a turn can take.
         public int? MinTurnTimeSeconds;
     }
 }

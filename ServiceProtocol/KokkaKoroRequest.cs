@@ -29,7 +29,7 @@ namespace ServiceProtocol
         [EnumMember(Value = "AddHostedBot")]
         AddHostedBot = 4,
 
-        // Joins the current client as a live player.
+        // Joins the current client as a player.
         [EnumMember(Value = "JoinGame")]
         JoinGame = 5,
 

@@ -168,6 +168,61 @@ namespace GameService.ServiceCore
             return KokkaKoroResponse<object>.CreateResult(response);
         }
 
+        public KokkaKoroResponse<object> JoinGame(string userName)
+        {
+            if (String.IsNullOrWhiteSpace(userName))
+            {
+                return KokkaKoroResponse<object>.CreateError("You must have a user name to join a game.");
+            }
+
+            ServicePlayer foundHostedBot = null;
+            lock (m_gameLock)
+            {
+                // Check the state again.
+                if (m_state != KokkaKoroGameState.Lobby)
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
+                }
+                if (m_players.Count() >= m_playerLimit)
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game full");
+                }
+
+                // Search to see if this is a bot joining the game.
+                foreach(ServicePlayer p in m_players)
+                {
+                    if(p.GetUserName().Equals(userName))
+                    {
+                        // This is a bot connecting, let the service player know it has now joined.
+                        foundHostedBot = p;
+                        break;
+                    }
+                }
+
+                // If this isn't a bot connecting to the game,
+                // add the new player.
+                if(foundHostedBot == null)
+                {
+                    return KokkaKoroResponse<object>.CreateError("Remote players are not supported at this time.");
+                    // Add the player.
+                    //m_players.Add(new ServicePlayer(bot, inGameName));
+                }
+            }
+
+            // Outside of the lock, if this was a hosted bot connecting tell it now.
+            if(foundHostedBot != null)
+            {
+                foundHostedBot.SetBotJoined();
+            }
+
+            // Create a response
+            JoinGameResponse response = new JoinGameResponse()
+            {
+                Game = GetInfo()
+            };
+            return KokkaKoroResponse<object>.CreateResult(response);
+        }
+
         public string StartGame()
         {
             lock (m_gameLock)
