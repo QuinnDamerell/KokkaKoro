@@ -8,8 +8,6 @@ namespace GameService.ServiceCore
 {
     public class ServicePlayer
     {
-        static readonly string s_botPassword = "IamABot";
-
         // For hosted bots, this is a GUID we make that we will give to the bot for them to connect with.
         // For remote players, this is the actual username.
         string m_userName;

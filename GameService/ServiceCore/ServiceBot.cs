@@ -1,6 +1,7 @@
 ﻿using ServiceProtocol.Common;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -28,6 +29,11 @@ namespace GameService.ServiceCore
         string m_localPath;
         bool m_wasLoadedFromCache;
 
+        // Passed to the bot to help it connect
+        string m_userName;
+        Guid m_gameId;
+        string m_gamePassword;
+
         Thread m_processMonitor;
         ServiceBotState m_state;
         object m_stateLock = new object();
@@ -37,13 +43,19 @@ namespace GameService.ServiceCore
         string m_stdOut = null;
         string m_stdErr = null;
 
-        public ServiceBot(KokkaKoroBot info, string localPath, bool wasInCache)
+        public ServiceBot(KokkaKoroBot info, string localPath, bool wasInCache, string userName, Guid gameId, string gamePassword)
         {
             m_info = info;
             m_localPath = localPath;
             m_wasLoadedFromCache = wasInCache;
             m_state = ServiceBotState.NotStarted;
+
+            m_userName = userName;
+            m_gameId = gameId;
+            m_gamePassword = gamePassword;
         }
+
+        public void SetGameO
 
         public bool StartBot()
         {
@@ -117,6 +129,12 @@ namespace GameService.ServiceCore
 
         private void InnerProcessMonitor(Process process)
         {
+            const string c_userNameKey = "UserName";
+            const string c_userPasscodeKey = "Passcode";
+            const string c_gameIdKey = "GameId";
+            const string c_gamePasswordKey = "GamePassword";
+            const string s_botPassword = "IamABot";
+
             // Create the starting args.
             ProcessStartInfo info = new ProcessStartInfo()
             {
@@ -129,6 +147,15 @@ namespace GameService.ServiceCore
                 UseShellExecute = false,
                 WorkingDirectory = m_localPath
             };
+
+            // Pass the game vars to the bot.
+            info.EnvironmentVariables.Add(c_userNameKey, m_userName);
+            info.EnvironmentVariables.Add(c_userPasscodeKey, s_botPassword);
+            info.EnvironmentVariables.Add(c_gameIdKey, m_gameId.ToString());
+            if (!String.IsNullOrWhiteSpace(m_gamePassword))
+            {
+                info.EnvironmentVariables.Add(c_gamePasswordKey, m_gamePassword);
+            }
 
             // Create and start the process.
             process.StartInfo = info;
