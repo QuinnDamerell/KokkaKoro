@@ -22,7 +22,7 @@ namespace ServiceSdkExample
 
     class Example
     {
-        int? localPort = null;
+        int? localPort = 64005;
 
         public async void WorkWrapper(AutoResetEvent doneEvent)
         {

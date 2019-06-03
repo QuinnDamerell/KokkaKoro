@@ -69,5 +69,64 @@ namespace GameService.WebsocketsHelpers
                 }
             }
         }
+
+        public async Task<bool> BroadcastMessageAsync(List<string> userNames, KokkaKoroResponse<object> message)
+        {
+            // Only allow game updates to be broadcast like this.
+            if(message.Type != KokkaKoroResponseType.GameUpdate)
+            {
+                return false;
+            }
+
+            string jsonStr;
+            try
+            {
+                jsonStr = JsonConvert.SerializeObject(message);
+            }
+            catch(Exception e)
+            {
+                Logger.Error("Failed to seralize braodcast message", e);
+                return false;
+            }
+
+            // Build a list of clients we need to send to.
+            List<BetterWebsocket> client = new List<BetterWebsocket>();
+            lock (m_activeConnections)
+            {
+                foreach(KeyValuePair<Guid, BetterWebsocket> p in m_activeConnections)
+                {
+                    foreach(string name in userNames)
+                    {
+                        if (p.Value.GetUserName().Equals(name))
+                        {
+                            client.Add(p.Value);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            foreach(BetterWebsocket sock in client)
+            {
+                await sock.SendMessage(jsonStr);
+            }
+            return true;
+        }
+
+        public bool BroadcastMessage(List<string> userNames, KokkaKoroResponse<object> message, bool block = true)
+        {
+            if (block)
+            {
+                var task = BroadcastMessageAsync(userNames, message);
+                task.Wait();
+                return task.Result;
+            }
+            else
+            {
+                var task = BroadcastMessageAsync(userNames, message);
+                task.ContinueWith(t => {}, TaskContinuationOptions.OnlyOnFaulted);
+                return true;
+            }
+        }
     }
 }

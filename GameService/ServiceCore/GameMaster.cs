@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GameService.ServiceCore
@@ -18,6 +19,12 @@ namespace GameService.ServiceCore
         public static GameMaster Get()
         {
             return s_instance;
+        }
+
+        public GameMaster()
+        {
+            m_gameManagerThread = new Thread(GameManagerLoop);
+            m_gameManagerThread.Start();
         }
               
         // Note userName can be null if the name hasn't been set yet. 
@@ -89,7 +96,9 @@ namespace GameService.ServiceCore
 
         #region Game Management
 
+        TimeSpan c_maxKeepGameAroundTime = new TimeSpan(30, 0, 0, 0);
         Dictionary<Guid, ServiceGame> m_currentGames = new Dictionary<Guid, ServiceGame>();
+        Thread m_gameManagerThread = null;
 
         private KokkaKoroResponse<object> CreateGame(string command, string userName)
         {
@@ -195,29 +204,16 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError("GameId is required.");
             }
 
-            // Find the game
-            ServiceGame game = null;
-            lock (m_currentGames)
+            // Try to find and validate the game.
+            (ServiceGame game, KokkaKoroResponse<object> error) = GetGame(request.CommandOptions.GameId, request.CommandOptions.Password);
+            if (error != null)
             {
-                if (m_currentGames.ContainsKey(request.CommandOptions.GameId))
-                {
-                    game = m_currentGames[request.CommandOptions.GameId];
-                }
-            }
-            if (game == null)
-            {
-                return KokkaKoroResponse<object>.CreateError("GameId not found.");
-            }
-
-            // Validate the password (if there is one)
-            if (!game.ValidatePassword(request.CommandOptions.Password))
-            {
-                return KokkaKoroResponse<object>.CreateError("Invalid password for gameId.");
+                return error;
             }
 
             // Try to start it.
-            string error = game.StartGame();
-            if (String.IsNullOrWhiteSpace(error))
+            string startError = game.StartGame();
+            if (String.IsNullOrWhiteSpace(startError))
             {
                 // Success, return the game info.
                 StartGameResponse resp = new StartGameResponse { Game = game.GetInfo() };
@@ -226,6 +222,66 @@ namespace GameService.ServiceCore
             else
             {
                 return KokkaKoroResponse<object>.CreateError($"Failed to start game: {error}.");
+            }
+        }
+
+        public void GameManagerLoop()
+        {
+            while(true)
+            {
+                DateTime start = DateTime.Now;
+                try
+                {
+                    GameManagerDoWork();
+                }
+                catch(Exception e)
+                {
+                    Logger.Error($"Exception in game manager loop.", e);
+                }
+
+                // Sleep for a while
+                TimeSpan workTime = DateTime.Now - start;
+                Thread.Sleep(new TimeSpan(0, 0, 1) - workTime);
+            }
+        }
+
+        public void GameManagerDoWork()
+        {
+            // First of all, find an remove any old games that exist.
+            List<ServiceGame> oldGames = new List<ServiceGame>();
+            lock (m_currentGames)
+            {
+                foreach(KeyValuePair<Guid, ServiceGame> p in m_currentGames)
+                {
+                    if(DateTime.UtcNow - p.Value.GetCreatedAt() > c_maxKeepGameAroundTime)
+                    {
+                        oldGames.Add(p.Value);
+                    }
+                }
+                foreach(ServiceGame g in oldGames)
+                {
+                    m_currentGames.Remove(g.GetId());
+                }
+            }
+            foreach(ServiceGame g in oldGames)
+            {
+                g.EnsureEnded();
+            }
+
+            // Next call the game tick on all active games.
+            // But we don't want to hold the map lock, so make a copy of the list
+            // and then call on it.
+            List<ServiceGame> currentGames = new List<ServiceGame>();
+            lock (m_currentGames)
+            {
+                foreach (KeyValuePair<Guid, ServiceGame> p in m_currentGames)
+                {
+                    currentGames.Add(p.Value);
+                }
+            }
+            foreach(ServiceGame g in currentGames)
+            {
+                g.GameTick();
             }
         }
 

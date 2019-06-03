@@ -1,4 +1,7 @@
-﻿using ServiceProtocol;
+﻿using GameCore;
+using GameService.WebsocketsHelpers;
+using Newtonsoft.Json;
+using ServiceProtocol;
 using ServiceProtocol.Common;
 using ServiceProtocol.Responses;
 using System;
@@ -6,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,7 +17,7 @@ namespace GameService.ServiceCore
 {
     public class ServiceGame
     {
-        static TimeSpan c_maxGameLength = new TimeSpan(1, 0, 0);
+        static TimeSpan c_maxGameLength = new TimeSpan(0, 10, 0);
         static TimeSpan c_maxTurnTime   = new TimeSpan(1, 0, 0);
         static TimeSpan c_minTurnTime   = new TimeSpan(0, 0, 0);
 
@@ -33,6 +37,9 @@ namespace GameService.ServiceCore
 
         List<ServicePlayer> m_players = new List<ServicePlayer>();
         Thread m_gameLoop = null;
+
+        // Game stuff
+        GameEngine m_gameEngine;
 
         public ServiceGame(int? playerLimit = null, string gameName = null, string createdBy = null, string password = null, TimeSpan? turnTimeLimit = null, TimeSpan? minTurnLimit = null, TimeSpan? gameTimeLimit = null)
         {
@@ -65,6 +72,11 @@ namespace GameService.ServiceCore
         public Guid GetId()
         {
             return m_id;
+        }
+
+        public DateTime GetCreatedAt()
+        {
+            return m_createdAt;
         }
 
         public bool ValidatePassword(string userPassword)
@@ -178,16 +190,6 @@ namespace GameService.ServiceCore
             ServicePlayer foundHostedBot = null;
             lock (m_gameLock)
             {
-                // Check the state again.
-                if (m_state != KokkaKoroGameState.Lobby)
-                {
-                    return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
-                }
-                if (m_players.Count() >= m_playerLimit)
-                {
-                    return KokkaKoroResponse<object>.CreateError($"Game full");
-                }
-
                 // Search to see if this is a bot joining the game.
                 foreach(ServicePlayer p in m_players)
                 {
@@ -199,9 +201,19 @@ namespace GameService.ServiceCore
                     }
                 }
 
+                // Check the state again.
+                if ((foundHostedBot == null && m_state != KokkaKoroGameState.Lobby) || (foundHostedBot != null && m_state != KokkaKoroGameState.WaitingForHostedBots))
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
+                }
+                if (m_players.Count() >= m_playerLimit)
+                {
+                    return KokkaKoroResponse<object>.CreateError($"Game full");
+                }
+
                 // If this isn't a bot connecting to the game,
                 // add the new player.
-                if(foundHostedBot == null)
+                if (foundHostedBot == null)
                 {
                     return KokkaKoroResponse<object>.CreateError("Remote players are not supported at this time.");
                     // Add the player.
@@ -213,6 +225,25 @@ namespace GameService.ServiceCore
             if(foundHostedBot != null)
             {
                 foundHostedBot.SetBotJoined();
+
+                // Check if all of the player are ready now.
+                lock(m_gameLock)
+                {
+                    bool allReady = true;
+                    foreach(ServicePlayer p in m_players)
+                    {
+                        if(!p.IsReady())
+                        {
+                            allReady = false;
+                            break;
+                        }
+                    }
+
+                    if(allReady)
+                    {
+                        StartGameInternal();
+                    }
+                }
             }
 
             // Create a response
@@ -236,14 +267,112 @@ namespace GameService.ServiceCore
                 {
                     return "Invalid state to start game";
                 }
+
+                // Put the game in the waiting for bots state.
                 m_state = KokkaKoroGameState.WaitingForHostedBots;
             }
 
-            // Kick off the game loop thread to run the game.
-            m_gameLoop = new Thread(GameLoop);
-            m_gameLoop.Start();
+            // Spawn the any bot players.
+            bool hasBots = false;
+            foreach (ServicePlayer p in m_players)
+            {
+                if (p.IsBot())
+                {
+                    hasBots = true;
+                    p.StartBot(GetId(), m_password);
+                }
+            }
+
+            if(!hasBots)
+            {
+                StartGameInternal();
+            }
 
             return null;
+        }
+
+        private void StartGameInternal()
+        {
+            // First of all, take all of the players and shuffle them to get the player order.
+            Random random = new Random((int)DateTime.Now.Ticks);
+            for (int i = 0; i < m_players.Count * 10; i++)
+            {
+                int from = random.Next(0, m_players.Count);
+                int to = random.Next(0, m_players.Count);
+                ServicePlayer tmp = m_players[to];
+                m_players[to] = m_players[from];
+                m_players[from] = tmp;
+            }
+
+            // Now let's begin!
+            m_gameEngine = new GameEngine();
+
+
+            BroadcastMessage();
+        }
+
+        public void GameTick()
+        {
+            // Do a quick state check, if we are done there's nothign to do.
+            if(m_state == KokkaKoroGameState.Complete)
+            {
+                return;
+            }
+
+            try
+            {
+                GameTickInternal();
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine($"Excpetion in game tick {e.Message}");
+                SetFatalError($"Exception thrown in game tick. {e.Message}, {e.StackTrace}");
+                EnsureEnded();
+            }            
+        }
+
+        private void GameTickInternal()
+        {
+            // First, make sure the game should still be running.
+            DateTime now = DateTime.UtcNow;
+            if(now - m_createdAt > m_gameTimeLmit)
+            {
+                SetFatalError("Game timedout.");
+                EnsureEnded();
+                return;
+            }
+
+            // If we are in the lobby, we have nothing to do right now.
+            if(m_state == KokkaKoroGameState.Lobby)
+            {
+                return;
+            }
+
+        }
+
+        public void EnsureEnded()
+        {
+            try
+            {
+                // Make sure the bots are dead.
+                foreach (ServicePlayer p in m_players)
+                {
+                    if (p.IsBot())
+                    {
+                        p.EnsureKilled();
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Logger.Error("Failed to ensure bots are dead for game.", e);
+            }                 
+
+            // Set the game complete
+            lock (m_gameLock)
+            {
+                m_state = KokkaKoroGameState.Complete;
+            }
         }
 
         public KokkaKoroGame GetInfo()
@@ -274,56 +403,27 @@ namespace GameService.ServiceCore
             };
         }
 
-        private void GameLoop()
-        {
-            try
-            {
-                InnerGameLoop();
-            }
-            catch(Exception e)
-            {
-                Logger.Error("Excption in game loop.", e);
-                SetFatalError($"Exception thrown in game loop. {e.Message}");
-            }
-
-            // Make sure our state is set.
-            lock (m_gameLock)
-            {
-                m_state = KokkaKoroGameState.Complete;
-            }            
-        }
-
-        private void InnerGameLoop()
-        {
-            lock(m_gameLock)
-            {
-                if(m_state != KokkaKoroGameState.WaitingForHostedBots)
-                {
-                    SetFatalError("Wrong inital state.");
-                    return;
-                }
-            }
-
-            // Spawn the bot players.
-            foreach(ServicePlayer p in m_players)
-            {
-                if(p.IsBot())
-                {
-                    p.StartBot();
-                }
-            }
-
-            // Wait for the bots to connect.
-
-
-        }
-
         private void SetFatalError(string err)
         {
             if(String.IsNullOrWhiteSpace(err))
             {
                 m_fatalError = err;
             }
+        }
+
+        private void BroadcastMessage(KokkaKoroResponse<object> message)
+        {
+            // Use a for loop here to make sure we don't hit exceptions since we aren't using the lock.
+            // It's safe to not use the lock because this will never decrease, only increase. So worst case,
+            // we miss someone.
+            List<string> userNames = new List<string>();
+            for(int i = 0; i < m_players.Count; i++)
+            {
+                userNames.Add(m_players[i].GetUserName());
+            }
+
+            // Send the message
+            WebsocketManager.Get().BroadcastMessage(userNames, message, true);
         }
     }
 }

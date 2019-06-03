@@ -31,6 +31,7 @@ namespace GameService.ServiceCore
 
         // Passed to the bot to help it connect
         string m_userName;
+        string m_userPasscode;
         Guid m_gameId;
         string m_gamePassword;
 
@@ -43,21 +44,15 @@ namespace GameService.ServiceCore
         string m_stdOut = null;
         string m_stdErr = null;
 
-        public ServiceBot(KokkaKoroBot info, string localPath, bool wasInCache, string userName, Guid gameId, string gamePassword)
+        public ServiceBot(KokkaKoroBot info, string localPath, bool wasInCache)
         {
             m_info = info;
             m_localPath = localPath;
             m_wasLoadedFromCache = wasInCache;
-            m_state = ServiceBotState.NotStarted;
-
-            m_userName = userName;
-            m_gameId = gameId;
-            m_gamePassword = gamePassword;
+            m_state = ServiceBotState.NotStarted;       
         }
 
-        public void SetGameO
-
-        public bool StartBot()
+        public bool StartBot(Guid gameId, string gamePassword, string userName, string passcode)
         {
             lock(m_stateLock)
             {
@@ -67,6 +62,12 @@ namespace GameService.ServiceCore
                 }
                 m_state = ServiceBotState.Starting;
             }
+
+            m_userName = userName;
+            m_userPasscode = passcode;
+            m_gameId = gameId;
+            m_gamePassword = gamePassword;
+
             m_processMonitor = new Thread(ProcessMontior);
             m_processMonitor.Start();
             return true;
@@ -133,7 +134,7 @@ namespace GameService.ServiceCore
             const string c_userPasscodeKey = "Passcode";
             const string c_gameIdKey = "GameId";
             const string c_gamePasswordKey = "GamePassword";
-            const string s_botPassword = "IamABot";
+            const string c_localServiceAddress = "LocalServiceAddress";
 
             // Create the starting args.
             ProcessStartInfo info = new ProcessStartInfo()
@@ -149,12 +150,13 @@ namespace GameService.ServiceCore
             };
 
             // Pass the game vars to the bot.
-            info.EnvironmentVariables.Add(c_userNameKey, m_userName);
-            info.EnvironmentVariables.Add(c_userPasscodeKey, s_botPassword);
-            info.EnvironmentVariables.Add(c_gameIdKey, m_gameId.ToString());
+            info.EnvironmentVariables[c_userNameKey] = m_userName;
+            info.EnvironmentVariables[c_userPasscodeKey] = m_userPasscode;
+            info.EnvironmentVariables[c_gameIdKey] = m_gameId.ToString();
+            info.EnvironmentVariables[c_localServiceAddress] = $"ws://{Utils.GetServiceLocalAddress()}";
             if (!String.IsNullOrWhiteSpace(m_gamePassword))
             {
-                info.EnvironmentVariables.Add(c_gamePasswordKey, m_gamePassword);
+                info.EnvironmentVariables[c_gamePasswordKey] = m_gamePassword;
             }
 
             // Create and start the process.
@@ -214,7 +216,7 @@ namespace GameService.ServiceCore
             }
         }
 
-        public bool GetIsReady()
+        public bool IsReady()
         {
             return m_state == ServiceBotState.Joined;
         }

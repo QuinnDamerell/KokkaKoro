@@ -46,5 +46,10 @@ namespace ServiceProtocol
         {
             return new KokkaKoroResponse<T> { Type = KokkaKoroResponseType.RequestResult, Data = obj };
         }
+
+        public static KokkaKoroResponse<T> CreateBroadcast(T obj)
+        {
+            return new KokkaKoroResponse<T> { Type = KokkaKoroResponseType.GameUpdate, Data = obj };
+        }
     }
 }
