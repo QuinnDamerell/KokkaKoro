@@ -6,6 +6,7 @@ namespace GameCore.CommonObjects
 {
     class Marketplace
     {
-        public List<int> BuildingAvailable = new List<int>();
+        public List<int> AvailableBuilding = new List<int>();
     }
 }
+

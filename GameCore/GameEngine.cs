@@ -16,7 +16,7 @@ namespace GameCore
 
         public GameEngine(List<string> players, GameMode mode)
         {
-            // Build the game inital state.
+            // Build the game initial state.
             SetupGame(players, mode);
         }
 
@@ -35,7 +35,12 @@ namespace GameCore
                 m_state.Players.Add(new GamePlayer() { Name = p, Coins = 3 });
             }
 
+            // Give each player their starting building
 
+
+            // Adding building to the marketplace
+
+            
         }
     }
 }
