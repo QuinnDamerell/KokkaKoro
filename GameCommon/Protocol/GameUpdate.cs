@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace GameCore.CommonObjects.Protocol
+namespace GameCommon.Protocol
 {
     public class GameUpdate
     {

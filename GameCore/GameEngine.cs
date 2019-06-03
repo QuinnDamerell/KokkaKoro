@@ -1,14 +1,14 @@
-﻿using GameCore.CommonObjects;
-using GameCore.CommonObjects.Protocol;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using GameCommon;
+using GameCommon.Protocol;
 
 namespace GameCore
 {
-    public enum GameMode
+    public class InitalPlayer
     {
-        BaseGame,
-        // todo expansions
+        public string UserName;
+        public string FriendlyName;
     }
 
     public class GameEngine
@@ -17,7 +17,7 @@ namespace GameCore
         bool m_gameStarted = false;
         LogKeeper m_logKeeper;
 
-        public GameEngine(List<string> players, GameMode mode)
+        public GameEngine(List<InitalPlayer> players, GameMode mode)
         {
             // Create a new logger.
             m_logKeeper = new LogKeeper();
@@ -63,14 +63,14 @@ namespace GameCore
             BuildPlayerActionRequest(log);
         }
 
-        private void SetupGame(List<string> players, GameMode mode)
+        private void SetupGame(List<InitalPlayer> players, GameMode mode)
         {
             m_state = new GameState();
 
             // Add the players
-            foreach(string p in players)
+            foreach(InitalPlayer p in players)
             {
-                m_state.Players.Add(new GamePlayer() { Name = p, Coins = 3 });
+                m_state.Players.Add(new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3 });
             }
 
             // Give each player their starting building

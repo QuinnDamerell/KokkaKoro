@@ -1,9 +1,9 @@
-﻿using GameCore.CommonObjects.Buildings;
+﻿using GameCommon.Buildings;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace GameCore.CommonObjects
+namespace GameCommon
 {
     // This class is used to list and get references to the building types. Since we don't send the building 
     // details in each game state, this is where you can find each building given it's index and query it for

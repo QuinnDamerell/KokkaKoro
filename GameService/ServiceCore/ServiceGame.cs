@@ -1,5 +1,5 @@
 ﻿using GameCore;
-using GameCore.CommonObjects.Protocol;
+using GameCommon.Protocol;
 using GameService.WebsocketsHelpers;
 using Newtonsoft.Json;
 using ServiceProtocol;
@@ -13,6 +13,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using GameCommon;
 
 namespace GameService.ServiceCore
 {
@@ -37,7 +38,6 @@ namespace GameService.ServiceCore
         string m_fatalError = null;
 
         List<ServicePlayer> m_players = new List<ServicePlayer>();
-        Thread m_gameLoop = null;
 
         // Game stuff
         GameEngine m_gameEngine;
@@ -188,43 +188,49 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError("You must have a user name to join a game.");
             }
 
-            ServicePlayer foundHostedBot = null;
+            ServicePlayer foundUser = null;
             lock (m_gameLock)
             {
-                // Search to see if this is a bot joining the game.
+                // Search to see if the username already exists.
                 foreach(ServicePlayer p in m_players)
                 {
                     if(p.GetUserName().Equals(userName))
                     {
-                        // This is a bot connecting, let the service player know it has now joined.
-                        foundHostedBot = p;
+                        foundUser = p;
                         break;
                     }
                 }
 
+                // Make sure the user we found is a bot that's connecting, if not deny them.
+                if(!foundUser.IsBot())
+                {
+                    return KokkaKoroResponse<object>.CreateError($"This user has already joined the game.");
+                }
+
                 // Check the state again.
-                if ((foundHostedBot == null && m_state != KokkaKoroGameState.Lobby) || (foundHostedBot != null && m_state != KokkaKoroGameState.WaitingForHostedBots))
+                if ((foundUser == null && m_state != KokkaKoroGameState.Lobby) || (foundUser != null && m_state != KokkaKoroGameState.WaitingForHostedBots))
                 {
                     return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
                 }
-                if (m_players.Count() >= m_playerLimit)
-                {
-                    return KokkaKoroResponse<object>.CreateError($"Game full");
-                }
 
-                // If this isn't a bot connecting to the game,
-                // add the new player.
-                if (foundHostedBot == null)
+                // If this isn't a bot connecting to the game, the remote player.
+                if (foundUser == null)
                 {
+                    // Check the player count.
+                    if (m_players.Count() >= m_playerLimit)
+                    {
+                        return KokkaKoroResponse<object>.CreateError($"Game full");
+                    }
+
                     // Add the player.
                     m_players.Add(new ServicePlayer(userName));
                 }
             }
 
             // Outside of the lock, if this was a hosted bot connecting tell it now.
-            if(foundHostedBot != null)
+            if(foundUser != null)
             {
-                foundHostedBot.SetBotJoined();
+                foundUser.SetBotJoined();
 
                 // Check if all of the player are ready now.
                 lock(m_gameLock)
@@ -314,12 +320,12 @@ namespace GameService.ServiceCore
             }
 
             // Now let's begin!
-            List<string> players = new List<string>();
-            foreach(ServicePlayer p in m_players)
+            List<InitalPlayer> players = new List<InitalPlayer>();
+            foreach (ServicePlayer p in m_players)
             {
-                players.Add(p.GetInGameName());
+                players.Add(new InitalPlayer() { FriendlyName = p.GetInGameName(), UserName = p.GetUserName() });
             }
-            m_gameEngine = new GameEngine(players, GameMode.BaseGame);
+            m_gameEngine = new GameEngine(players, GameMode.Base);
 
             // Invoke the first null action to get the ball rolling.
             List<GameLog> actionLog = m_gameEngine.ConsumeAction();
@@ -366,17 +372,9 @@ namespace GameService.ServiceCore
             }
             if(m_state == KokkaKoroGameState.WaitingForHostedBots)
             {
-                // Check if the bots are ready now.
-                foreach(ServicePlayer  p in m_players)
-                {
-                    if(!p.IsReady())
-                    {
-                        return;
-                    }
-                }
-
-                // We are ready! Start the game!
-                StartGameInternal();
+                // If we are in the hosted bots connecting state also return.
+                // When they connect the join call will start the game when the last one is ready.
+                return;
             }
         }
 
@@ -443,6 +441,11 @@ namespace GameService.ServiceCore
 
         private void BroadcastMessages(List<GameLog> actionLog)
         {
+            if(actionLog.Count() == 0)
+            {
+                return;
+            }
+
             // Use a for loop here to make sure we don't hit exceptions since we aren't using the lock.
             // It's safe to not use the lock because this will never decrease, only increase. So worst case,
             // we miss someone.
@@ -452,15 +455,17 @@ namespace GameService.ServiceCore
                 userNames.Add(m_players[i].GetUserName());
             }
 
-            // For ever log message we got...
-            foreach (GameLog log in actionLog)
+            // Ensure all of the logs are tagged with the gameId
+            foreach(GameLog l in actionLog)
             {
-                // Create the message
-                KokkaKoroResponse<object> message = KokkaKoroResponse<object>.CreateGameLogUpdate(log);           
-
-                // Send the message
-                WebsocketManager.Get().BroadcastMessage(userNames, message, true);
+                l.GameId = GetId();
             }
+
+            // Create the message
+            KokkaKoroResponse<object> message = KokkaKoroResponse<object>.CreateGameLogsUpdate(actionLog);
+
+            // Send the message
+            WebsocketManager.Get().BroadcastMessage(userNames, message, true);
         }
     }
 }

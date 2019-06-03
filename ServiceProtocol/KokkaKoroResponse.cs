@@ -14,8 +14,8 @@ namespace ServiceProtocol
         RequestResult = 0,
 
         //  Indicates this is a non-client-invoked game update.
-        [EnumMember(Value = "GameLogUpdate")]
-        GameLogUpdate = 1,
+        [EnumMember(Value = "GameLogsUpdate")]
+        GameLogsUpdate = 1,
     }
 
     public class KokkaKoroResponse<T>
@@ -47,9 +47,9 @@ namespace ServiceProtocol
             return new KokkaKoroResponse<T> { Type = KokkaKoroResponseType.RequestResult, Data = obj };
         }
 
-        public static KokkaKoroResponse<T> CreateGameLogUpdate(T obj)
+        public static KokkaKoroResponse<T> CreateGameLogsUpdate(T obj)
         {
-            return new KokkaKoroResponse<T> { Type = KokkaKoroResponseType.GameLogUpdate, Data = obj };
+            return new KokkaKoroResponse<T> { Type = KokkaKoroResponseType.GameLogsUpdate, Data = obj };
         }
     }
 }

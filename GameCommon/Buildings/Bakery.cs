@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GameCore.CommonObjects.Buildings
+namespace GameCommon.Buildings
 {
     class Bakery : BuildingBase
     {

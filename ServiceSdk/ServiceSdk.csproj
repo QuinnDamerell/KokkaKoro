@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\GameCommon\GameCommon.csproj" />
     <ProjectReference Include="..\ServiceProtocol\ServiceProtocol.csproj" />
   </ItemGroup>
 

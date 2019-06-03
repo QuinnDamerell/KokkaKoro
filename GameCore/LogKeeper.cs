@@ -1,4 +1,4 @@
-﻿using GameCore.CommonObjects.Protocol;
+﻿using GameCommon.Protocol;
 using System;
 using System.Collections.Generic;
 using System.Text;

@@ -73,7 +73,7 @@ namespace GameService.WebsocketsHelpers
         public async Task<bool> BroadcastMessageAsync(List<string> userNames, KokkaKoroResponse<object> message)
         {
             // Only allow game updates to be broadcast like this.
-            if(message.Type != KokkaKoroResponseType.GameLogUpdate)
+            if(message.Type != KokkaKoroResponseType.GameLogsUpdate)
             {
                 return false;
             }

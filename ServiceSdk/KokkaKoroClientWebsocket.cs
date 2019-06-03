@@ -29,6 +29,7 @@ namespace KokkaKoro
         public readonly int WriteTimeoutMs = 30000;
         public readonly int ResponseTimeoutMs = 60000;
 
+        IWebSocketHandler m_handler;
         ClientWebSocket m_websocket;
         WebsocketState m_state;
         object m_stateLock = new object();
@@ -36,8 +37,9 @@ namespace KokkaKoro
         Dictionary<int, PendingRequest> m_pendingRequests = new Dictionary<int, PendingRequest>();
         SemaphoreSlim m_sendingSemaphore = new SemaphoreSlim(1);
 
-        public KokkaKoroClientWebsocket()
+        public KokkaKoroClientWebsocket(IWebSocketHandler handler)
         {
+            m_handler = handler;
             m_state = WebsocketState.NotConnected;
         }
 
@@ -101,7 +103,7 @@ namespace KokkaKoro
                     }
 
                     // Handle the message
-                    HandleNewMessage(Encoding.UTF8.GetString(message.ToArray()));
+                    await HandleNewMessage(Encoding.UTF8.GetString(message.ToArray()));
                 }
                 catch(Exception e)
                 {
@@ -112,16 +114,15 @@ namespace KokkaKoro
             }
         }
 
-        private void HandleNewMessage(string msg)
+        private async Task HandleNewMessage(string msg)
         {
             Logger.Info($"<- {msg}");
 
             // Parse the response.
             KokkaKoroResponse<object> response = JsonConvert.DeserializeObject<KokkaKoroResponse<object>>(msg);
-            if(response.Type == KokkaKoroResponseType.GameLogUpdate)
+            if(response.Type == KokkaKoroResponseType.GameLogsUpdate)
             {
-                // This is a broadcast message
-                // ToDo try catch this.
+                await m_handler.OnGameUpdates(msg);
             }
             else
             {
@@ -157,10 +158,10 @@ namespace KokkaKoro
 
         public async Task Disconnect()
         {      
-            await InternalDisconnect();
+            await InternalDisconnect(true);
         }
 
-        private async Task InternalDisconnect()
+        private async Task InternalDisconnect(bool isFromClient = false)
         {
             lock (m_stateLock)
             {
@@ -194,6 +195,8 @@ namespace KokkaKoro
                 }
                 catch { }
             }
+
+            await m_handler.OnDisconnect(isFromClient);
         }
 
         public async Task<string> SendRequest(KokkaKoroRequest<object> request)

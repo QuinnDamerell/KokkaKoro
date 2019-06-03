@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text;
 
-namespace GameCore.CommonObjects.Protocol
+namespace GameCommon.Protocol
 {
     public enum GameActionType
     {

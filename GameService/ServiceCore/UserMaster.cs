@@ -24,8 +24,9 @@ namespace GameService.ServiceCore
                 return false;
             }
 
-            // First take the incoming password and hash it.
-            HashAndPrepareUser(user);
+            // This function will return a copy of the user we will use for auth.
+            // It will also hash the password on the original user.
+            user = HashAndPrepareUser(user);
 
             // Make sure we are ready.
             await EnsureUserDict();
@@ -55,19 +56,27 @@ namespace GameService.ServiceCore
             return true;
         }
 
-        private void HashAndPrepareUser(KokkaKoroUser user)
+        private KokkaKoroUser HashAndPrepareUser(KokkaKoroUser user)
         {
+            // Create a copy that we will use for auth. We don't want to change the current user object except the password.
+            KokkaKoroUser newUser = new KokkaKoroUser() { Passcode = user.Passcode, UserName = user.UserName };
+
             // Make user name not case sensitive.
-            user.UserName = user.UserName.ToLower().Trim();
-            string unique = user.UserName + "." + user.Passcode;
+            newUser.UserName = newUser.UserName.ToLower().Trim();
+            string unique = newUser.UserName + "." + newUser.Passcode;
 
             // Hash the passcode.
             using (var sha = new System.Security.Cryptography.SHA256Managed())
             {
                 byte[] textData = System.Text.Encoding.UTF8.GetBytes(unique);
                 byte[] hash = sha.ComputeHash(textData);
-                user.Passcode = BitConverter.ToString(hash).Replace("-", String.Empty);
+                newUser.Passcode = BitConverter.ToString(hash).Replace("-", String.Empty);
             }
+
+            // Replace the og user pass with the hash as well. Just so it doesn't leak.
+            user.Passcode = newUser.Passcode;
+
+            return newUser;
         }
 
         // Throws if fails!

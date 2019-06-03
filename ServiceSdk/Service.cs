@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using GameCommon.Protocol;
+using Newtonsoft.Json;
 using ServiceProtocol;
 using ServiceProtocol.Common;
 using ServiceProtocol.Requests;
@@ -12,21 +13,91 @@ using System.Threading.Tasks;
 
 namespace KokkaKoro
 {
-    public class Service
+    public delegate Task DisconnectCallback(bool isClientInvoked);
+    public delegate Task GameUpdatesCallback(List<GameLog> newLogItems);
+
+    internal interface IWebSocketHandler
     {
+        Task OnGameUpdates(string jsonStr);
+
+        Task OnDisconnect(bool isFromClient);
+    }
+
+    public class Service : IWebSocketHandler
+    {
+        // A callback that fires whenever there are any game the user is joined or spectating.
+        // This is how you get game update notifications and notifications when it's your turn.
+        public event GameUpdatesCallback OnGameUpdates;
+
+        // A callback that fires when we get disconnected from the service.
+        public event DisconnectCallback OnDisconnected;
+
         KokkaKoroClientWebsocket m_websocket;
 
+        // Turns on SDK debugging.
         public void SetDebugging(bool state)
         {
             Logger.SetDebug(state);
         }
 
+        // Connects to the service. 
+        // If local port is given, we will try to connect to the localhost port.
         public async Task ConnectAsync(int? localPort = null)
         {
-            m_websocket = new KokkaKoroClientWebsocket();
+            m_websocket = new KokkaKoroClientWebsocket(this);
             string url = localPort.HasValue ? $"ws://localhost:{localPort.Value}/ws" : $"wss://kokkakoro.azurewebsites.net/ws";
             Logger.Info($"Connecting to {url}");
             await m_websocket.Connect(url);
+        }
+
+        // Disconnects the SDK from the service.
+        public async Task Disconnect()
+        {
+           await m_websocket.Disconnect();
+        }
+
+        // Fires when the websocket receives a game update message.
+        async Task IWebSocketHandler.OnGameUpdates(string jsonStr)
+        {
+            KokkaKoroResponse<List<GameLog>> broadcastMsg = null;
+            try
+            {
+                broadcastMsg = JsonConvert.DeserializeObject<KokkaKoroResponse<List<GameLog>>>(jsonStr);
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Failed to parse GameUpdate message.", e);
+                return;
+            }
+
+            if (broadcastMsg == null || broadcastMsg.Data == null)
+            {
+                Logger.Error($"No data in broadcast message");
+                return;
+            }
+
+            // On game updates, pass them to the consumer.
+            try
+            {
+                await OnGameUpdates?.Invoke(broadcastMsg.Data);
+            }
+            catch(Exception e)
+            {
+                Logger.Error($"OnGameUpdates function had an unhanded exception.", e);
+            }
+        }
+
+        // Fires when the websocket closes.
+        async Task IWebSocketHandler.OnDisconnect(bool isFromClient)
+        {
+            try
+            {
+                await OnDisconnected?.Invoke(isFromClient);
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"OnDisconnected function had an unhanded exception.", e);
+            }
         }
 
         private async Task<KokkaKoroResponse<T>> MakeRequest<T>(KokkaKoroRequest<object> request, string requestName, bool expectData = true)

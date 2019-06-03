@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GameCore.CommonObjects
+namespace GameCommon
 {
     public enum GameMode
     {

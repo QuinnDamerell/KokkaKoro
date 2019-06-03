@@ -2,17 +2,20 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GameCore.CommonObjects.Protocol
+namespace GameCommon.Protocol
 {
     // Every action and update that's taken in the game is expressed as a game log item, so they can all be
     // logged and the entire game can be visualized.
     public class GameLog
     {
+        // The gameId where the log updates came from.
+        public Guid GameId;
+
         // Not null if this log entry is a game update.
         public GameUpdate Update;
 
         // Not null if this log entry is a game action request to a player.
-        public GameActionRequest ActionRequest;
+        public GameActionRequest ActionRequest;         
 
         //
         // Helpers
