@@ -6,7 +6,7 @@ using System.Text;
 
 namespace GameCore.CommonObjects.Protocol
 {
-    class GameUpdate
+    public class GameUpdate
     {
         // The new state of the current games. Includes everything you would see on the game table if you
         // were playing in real life.

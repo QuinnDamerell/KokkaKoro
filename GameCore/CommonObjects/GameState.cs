@@ -9,6 +9,12 @@ namespace GameCore.CommonObjects
         Base
     }
 
+    public enum TurnState
+    {
+        WaitingOnRoll,
+        WaitingOnBuyDecision
+    }
+
     public class GameState
     {
         // The game mode being played.
@@ -18,7 +24,13 @@ namespace GameCore.CommonObjects
         // The players are ordered by turn order.
         public List<GamePlayer> Players = new List<GamePlayer>();
 
+        // An index to the player who's turn it currently is.
+        public int CurrentPlayerIndex = 0;
+
+        // The current state of the current player.
+        public TurnState TurnState;
+
         // The market is the set of cards that are currently available for purchase.
-        Marketplace Market;
+        public Marketplace Market;
     }
 }

@@ -241,7 +241,11 @@ namespace GameService.ServiceCore
 
                 // Sleep for a while
                 TimeSpan workTime = DateTime.Now - start;
-                Thread.Sleep(new TimeSpan(0, 0, 1) - workTime);
+                TimeSpan diff = new TimeSpan(0, 0, 1) - workTime;
+                if(diff.TotalMilliseconds > 0)
+                {
+                    Thread.Sleep(diff);
+                }
             }
         }
 

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GameCore.CommonObjects
 {
-    class Marketplace
+    public class Marketplace
     {
         public List<int> AvailableBuilding = new List<int>();
     }

@@ -118,7 +118,7 @@ namespace KokkaKoro
 
             // Parse the response.
             KokkaKoroResponse<object> response = JsonConvert.DeserializeObject<KokkaKoroResponse<object>>(msg);
-            if(response.Type == KokkaKoroResponseType.GameUpdate)
+            if(response.Type == KokkaKoroResponseType.GameLogUpdate)
             {
                 // This is a broadcast message
                 // ToDo try catch this.

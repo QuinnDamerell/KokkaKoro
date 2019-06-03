@@ -73,7 +73,7 @@ namespace GameService.WebsocketsHelpers
         public async Task<bool> BroadcastMessageAsync(List<string> userNames, KokkaKoroResponse<object> message)
         {
             // Only allow game updates to be broadcast like this.
-            if(message.Type != KokkaKoroResponseType.GameUpdate)
+            if(message.Type != KokkaKoroResponseType.GameLogUpdate)
             {
                 return false;
             }
@@ -85,7 +85,7 @@ namespace GameService.WebsocketsHelpers
             }
             catch(Exception e)
             {
-                Logger.Error("Failed to seralize braodcast message", e);
+                Logger.Error("Failed to serialize broadcast message", e);
                 return false;
             }
 

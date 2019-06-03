@@ -9,7 +9,7 @@ namespace GameCore.CommonObjects.Protocol
 {
 
 
-    class GameAction<T>
+    public class GameAction<T>
     {
         // The chosen action the player wants to preform.
         [JsonConverter(typeof(StringEnumConverter))]

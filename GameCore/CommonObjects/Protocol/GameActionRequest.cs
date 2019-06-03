@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace GameCore.CommonObjects.Protocol
@@ -11,7 +12,12 @@ namespace GameCore.CommonObjects.Protocol
         RollDice
     }
 
-    class GameActionRequest
+    public class GameActionRequest
     {
+        // The current state of the game.
+        public GameState State;
+
+        // A list of possible actions the player can take right now.
+        public List<GameActionType> PossibleActions;
     }
 }

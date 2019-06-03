@@ -33,6 +33,7 @@ namespace GameService.ServiceCore
         public ServicePlayer(string userName)
         {
             m_userName = userName;
+            m_inGameName = userName;
         }
 
         public void StartBot(Guid gameId, string gamePassword)
