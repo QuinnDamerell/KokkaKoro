@@ -79,6 +79,28 @@ namespace GameService.ServiceCore
             return newUser;
         }
 
+        // Throws if storage fails!
+        public async Task<bool> RemoveUser(string userName)
+        {
+            // Make sure we are ready.
+            await EnsureUserDict();
+
+            lock (m_users)
+            {
+                // Make sure we have the user.
+                if (!m_users.ContainsKey(userName))
+                {
+                    return true;
+                }
+
+                m_users.Remove(userName);   
+            }
+
+            // Since we changed the user list, write it now.
+            await UploadUserList();
+            return true;
+        }
+
         // Throws if fails!
         private async Task EnsureUserDict()
         {

@@ -4,9 +4,15 @@ using System.Text;
 
 namespace GameCommon.Protocol.ActionOptions
 {
-    class RollDiceOptions
+    public enum DiceCount
+    {
+        OneDice,
+        TwoDice
+    }
+
+    public class RollDiceOptions
     {
         // Indicates the number of dice you would like to roll.
-        public int DiceCount;
+        public DiceCount Count;
     }
 }

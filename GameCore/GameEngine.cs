@@ -26,7 +26,7 @@ namespace GameCore
             SetupGame(players, mode);
         }
 
-        public List<GameLog> ConsumeAction()
+        public List<GameLog> ConsumeAction(string actionString)
         {
             // Handle the action.
             List<GameLog> actionLog = ConsumeActionInternal();

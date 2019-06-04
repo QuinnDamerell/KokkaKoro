@@ -90,6 +90,8 @@ namespace GameService.ServiceCore
                     return JoinGame(jsonStr, userName);
                 case KokkaKoroCommands.StartGame:
                     return StartGame(jsonStr);
+                case KokkaKoroCommands.SendGameAction:
+                    return SendGameAction(jsonStr, userName);
             }
             return KokkaKoroResponse<object>.CreateError("Command not implemented.");
         }
@@ -199,7 +201,7 @@ namespace GameService.ServiceCore
             {
                 return KokkaKoroResponse<object>.CreateError("Command options are required.");
             }
-            if (String.IsNullOrWhiteSpace(request.CommandOptions.GameId.ToString()))
+            if (request.CommandOptions.GameId.Equals(Guid.Empty))
             {
                 return KokkaKoroResponse<object>.CreateError("GameId is required.");
             }
@@ -420,7 +422,43 @@ namespace GameService.ServiceCore
             return game.JoinGame(userName);
         }
 
-        private (ServiceGame, KokkaKoroResponse<object>) GetGame(Guid gameId, string password)
+        private KokkaKoroResponse<object> SendGameAction(string command, string userName)
+        {
+            // Parse the request options
+            KokkaKoroRequest<SendGameActionOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<SendGameActionOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse game action", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // Validate
+            if (request.CommandOptions == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (request.CommandOptions.GameId.Equals(Guid.Empty))
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId is required.");
+            }
+
+            // Try to find and validate the game.
+            (ServiceGame game, KokkaKoroResponse<object> error) = GetGame(request.CommandOptions.GameId, null, true);
+            if (error != null)
+            {
+                return error;
+            }
+
+            // Try to start it.
+            SendGameActionResponse response = game.SendGameAction(command, userName);
+            return KokkaKoroResponse<object>.CreateResult(response);
+        }
+
+        private (ServiceGame, KokkaKoroResponse<object>) GetGame(Guid gameId, string password, bool bypassPassword = false)
         {
             // Find the game
             ServiceGame game = null;
@@ -437,9 +475,12 @@ namespace GameService.ServiceCore
             }
 
             // Validate the password (if there is one)
-            if (!game.ValidatePassword(password))
+            if (!bypassPassword)
             {
-                return (null, KokkaKoroResponse<object>.CreateError("The password is incorrect for the game."));
+                if (!game.ValidatePassword(password))
+                {
+                    return (null, KokkaKoroResponse<object>.CreateError("The password is incorrect for the game."));
+                }
             }
             return (game, null);
         }

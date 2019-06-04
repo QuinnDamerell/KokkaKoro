@@ -209,28 +209,29 @@ namespace KokkaKoro
 
             Logger.Info("Websocket disconnected");
 
+            // Send a close message before we exit the read loop since that will leave the socket
+            // in a state where it can't be sent.
+            if (m_websocket != null)
+            {
+                await m_sendingSemaphore.WaitAsync(WriteTimeoutMs);
+                try
+                {
+                    var closeTimeout = new CancellationTokenSource(WriteTimeoutMs);
+                    await m_websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "close", closeTimeout.Token);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error("Failed to send ws close message.", e);
+                }
+                finally
+                {
+                    m_sendingSemaphore.Release();
+                }
+            }
+
             // Stop the read loop.
             m_readLoopCancellationToken.Cancel();
             m_broadcastQueueCancellationToken.Cancel();
-
-            // Send a close message
-            if (m_websocket != null)
-            {
-                try
-                {                  
-                    var writeTimeout = new CancellationTokenSource(WriteTimeoutMs);
-                    await m_websocket.SendAsync(new ArraySegment<byte>(), WebSocketMessageType.Close, true, writeTimeout.Token);                    
-                }
-                catch { }
-
-                // And close the websocket.
-                try
-                {                    
-                    var closeTimeout = new CancellationTokenSource(WriteTimeoutMs);
-                    await m_websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "close", closeTimeout.Token);                    
-                }
-                catch { }
-            }
 
             await m_handler.OnDisconnect(isFromClient);
         }

@@ -22,9 +22,9 @@ namespace GameCommon.Protocol
         // 
         // Helpers
         //
-        public static GameAction<object> CreateRollDiceAction(int numberOfDiceToRoll)
+        public static GameAction<object> CreateRollDiceAction(DiceCount numberOfDiceToRoll)
         {
-            return new GameAction<object>() { Action = GameActionType.RollDice, Options = new RollDiceOptions() { DiceCount = numberOfDiceToRoll } };
+            return new GameAction<object>() { Action = GameActionType.RollDice, Options = new RollDiceOptions() { Count = numberOfDiceToRoll } };
         }
     }
 }
