@@ -11,6 +11,10 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "RollDice")]
         RollDice,
 
+        // Tells the server you want to use the result generated.
+        [EnumMember(Value = "CommitDiceResult")]
+        CommitDiceResult,
+
         // Tells the server the client wishes to build a building.
         [EnumMember(Value = "BuyBuilding")]
         BuyBuilding,

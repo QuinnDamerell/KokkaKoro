@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using GameCommon;
 using GameCommon.Protocol;
 using GameCommon.Protocol.ActionOptions;
+using GameCommon.Protocol.GameUpdateDetails;
 using GameCommon.StateHelpers;
 using Newtonsoft.Json.Linq;
 
@@ -19,6 +21,7 @@ namespace GameCore
         GameState m_state;
         bool m_gameStarted = false;
         LogKeeper m_logKeeper;
+        RNGCryptoServiceProvider m_random = new RNGCryptoServiceProvider();
 
         public GameEngine(List<InitalPlayer> players, GameMode mode)
         {
@@ -78,6 +81,9 @@ namespace GameCore
             // Build a state helper.
             StateHelper stateHelper = m_state.GetStateHelper(userName);
 
+            // Check the state.
+            ThrowIfInvalidState(stateHelper);
+
             // Check if this is the first action on the game.
             if (!m_gameStarted)
             {
@@ -91,14 +97,29 @@ namespace GameCore
             // Make sure it's this user's turn.
             ValidateUserTurn(action, stateHelper);
 
-            switch(action.Action)
+            // Validate the user can currently take the action they are trying to.
+            if (!stateHelper.CurrentTurn.CanTakeAction(action.Action))
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"In the current turn state, it's not valid to {action.Action}.", true);
+            }
+
+            // Handle the action.
+            switch (action.Action)
             {
                 case GameActionType.RollDice:
                     HandleRollDiceAction(actionLog, action, stateHelper);
                     break;
+                case GameActionType.CommitDiceResult:
+                    HandleDiceRollCommitAction(actionLog, action, stateHelper);
+                    break;
                 default:
                     throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
-            }     
+            }
+
+            // Check if the turn is over.
+
+            // Once the actions have been made, generate the new set of options for the player
+            //BuildPlayerActionRequest()
 
 
 
@@ -110,7 +131,7 @@ namespace GameCore
             m_gameStarted = true;
 
             // Broadcast a game start event.
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.GameStart, "Game Starting!"));
+            log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.GameStart, "Game Starting!", null));
 
             // And add a request for the first player to go.
             BuildPlayerActionRequest(log, stateHelper);
@@ -172,26 +193,98 @@ namespace GameCore
             RollDiceOptions options = null;
             try
             {
-                if(action.Options is JObject obj)
+                if (action.Options is JObject obj)
                 {
                     options = obj.ToObject<RollDiceOptions>();
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse roll dice options: {e.Message}", true);
             }
-            if(options.DiceCount < 0)
+            if (options.DiceCount < 0)
             {
                 throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Number of dice to roll must be > 0", true);
             }
-            if(options.DiceCount > stateHelper.Player.MaxDiceCountCanRoll())
+            if (options.DiceCount > stateHelper.Player.MaxDiceCountCanRoll())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't has a max of {stateHelper.Player.MaxDiceCountCanRoll()} they can roll currently.", true);
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.MaxDiceCountCanRoll()} currently.", true);
             }
 
-            // todo
+            // Roll the dice!
+            m_state.CurrentTurnState.Rolls++;
+            m_state.CurrentTurnState.DiceResults.Clear();
+            int sum = 0;
+            for (int i = 0; i < options.DiceCount; i++)
+            {
+                int result = RandomInteger(1, 6);
+                sum += result;
+                m_state.CurrentTurnState.DiceResults.Add(result);
+            }
 
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+
+            // Create an update
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
+                new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+
+            if (options.AutoCommitResult)
+            {
+                HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
+            }
+        }
+
+        private void HandleDiceRollCommitAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
+        {
+            // This doesn't have options, so there's no need to validate them.
+
+            //// Commit the dice roll.
+            //m_state.CurrentTurnState.Rolls++;
+            //m_state.CurrentTurnState.DiceResults.Clear();
+            //int sum = 0;
+            //for (int i = 0; i < options.DiceCount; i++)
+            //{
+            //    int result = RandomInteger(1, 6);
+            //    sum += result;
+            //    m_state.CurrentTurnState.DiceResults.Add(result);
+            //}
+
+            //// Validate things are good.
+            //ThrowIfInvalidState(stateHelper);
+
+            //// Create an update
+            //log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
+            //    new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+
+            //if (options.AutoCommitResult)
+            //{
+            //    HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
+            //}
+        }
+
+        private void ThrowIfInvalidState(StateHelper stateHelper)
+        {
+            string err = stateHelper.Validate();
+            if(!String.IsNullOrWhiteSpace(err))
+            {
+                // todo this should end the game.
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The game is now in an invalid state. Error: {err}", false);
+            }
+        }
+
+        private int RandomInteger(int min, int max)
+        {
+            uint scale = uint.MaxValue;
+            while (scale == uint.MaxValue)
+            {
+                byte[] four_bytes = new byte[4];
+                m_random.GetBytes(four_bytes);
+                scale = BitConverter.ToUInt32(four_bytes, 0);
+            }
+
+            // Add min to the scaled difference between max and min.
+            return (int)(min + (max - min) * ((double)scale / (double)uint.MaxValue));
         }
     }
 }

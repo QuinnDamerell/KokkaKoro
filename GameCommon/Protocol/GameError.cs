@@ -12,22 +12,33 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "Unknown")]
         Unknown,
 
+        // The game is in an invalid state.
+        [EnumMember(Value = "InvalidState")]
+        InvalidState,
+
+        // Something happened locally on the client.
         [EnumMember(Value = "LocalError")]
         LocalError,
 
+        // It's not this player's turn to make take actions.
         [EnumMember(Value = "NotPlayersTurn")]
         NotPlayersTurn,
 
+        // The player wasn't found in the player list for this game.
         [EnumMember(Value = "PlayerUserNameNotFound")]
         PlayerUserNameNotFound,
 
+        // The requested action has unknown.
         [EnumMember(Value = "UknownAction")]
         UknownAction,
 
+        // The requested action had invalid options (or no options)
         [EnumMember(Value = "InvalidActionOptions")]
         InvalidActionOptions,
 
-
+        // The requested action is invalid given the current game state.
+        [EnumMember(Value = "InvalidStateToTakeAction")]
+        InvalidStateToTakeAction,
     }
 
     public class GameError : Exception

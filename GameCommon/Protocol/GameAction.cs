@@ -22,9 +22,19 @@ namespace GameCommon.Protocol
         // 
         // Helpers
         //
-        public static GameAction<object> CreateRollDiceAction(DiceCount numberOfDiceToRoll)
+
+        // If you don't auto commit the result, the server will ask you if you want to commit the result after the results are returned.
+        // This is required because with a card you have the option to reroll the dice. But if you set the auto commit flag, the server
+        // will commit the result it generates instantly.
+        public static GameAction<object> CreateRollDiceAction(int numberOfDiceToRoll, bool autoCommitResult)
         {
-            return new GameAction<object>() { Action = GameActionType.RollDice, Options = new RollDiceOptions() { Count = numberOfDiceToRoll } };
+            return new GameAction<object>() { Action = GameActionType.RollDice, Options = new RollDiceOptions() { DiceCount = numberOfDiceToRoll, AutoCommitResult = autoCommitResult } };
+        }
+
+        // After you have been given dice results, this commits them for you turn.
+        public static GameAction<object> CreateCommitDiceResult()
+        {
+            return new GameAction<object>() { Action = GameActionType.CommitDiceResult, Options = null };
         }
     }
 }

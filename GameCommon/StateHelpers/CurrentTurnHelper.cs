@@ -25,6 +25,14 @@ namespace GameCommon.StateHelpers
             {
                 return "The current turn state rolls is to high or low for the current player.";
             }
+            if(s.CurrentTurnState.Rolls > 0 && s.CurrentTurnState.DiceResults.Count == 0)
+            {
+                return "The current turn has rolls but no dice value.";
+            }
+            if(s.CurrentTurnState.DiceResults.Count > m_gameHelper.Player.MaxDiceCountCanRoll())
+            {
+                return "There are more dice results than then player can currently roll dice.";
+            }
             return null;
         }
 
@@ -75,6 +83,11 @@ namespace GameCommon.StateHelpers
             }
 
             return actions;
+        }
+
+        public bool CanTakeAction(GameActionType type)
+        {
+            return GetPossibleActions().Contains(type);
         }
     }
 }

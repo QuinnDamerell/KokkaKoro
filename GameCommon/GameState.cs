@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GameCommon.StateHelpers;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -20,7 +21,9 @@ namespace GameCommon
         // Indicates if the player has bought a building on this turn or not.
         public bool HasBougthBuilding;
 
-        // 
+        // The results of the dice that have been rolled, assuming they have been rolled.
+        public List<int> DiceResults = new List<int>();
+
         public TurnState()
         {
             Clear(0);
@@ -30,6 +33,7 @@ namespace GameCommon
         {
             PlayerIndex = newPlayerIndex;
             Rolls = 0;
+            DiceResults.Clear();
             HasBougthBuilding = false;
         }
     }

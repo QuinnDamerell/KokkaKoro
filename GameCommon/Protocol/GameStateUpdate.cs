@@ -9,17 +9,17 @@ namespace GameCommon.Protocol
 {
     public enum StateUpdateType
     {
-        [EnumMember(Value = "General")]
-        General,
-
         [EnumMember(Value = "GameStart")]
         GameStart,
 
         [EnumMember(Value = "GameEnd")]
-        GameEnd
+        GameEnd,
+
+        [EnumMember(Value = "DiceRollResult")]
+        DiceRollResult,
     }
 
-    public class GameStateUpdate
+    public class GameStateUpdate<T>
     {
         // The new state of the current games. Includes everything you would see on the game table if you
         // were playing in real life.
@@ -31,5 +31,13 @@ namespace GameCommon.Protocol
 
         // The reason for the game update.
         public string Reason;
+
+        // Optionally, additional details about the update. The type of object can be determined by the StateUpdateType.
+        public T Details;
+
+        public static GameStateUpdate<T> Create(GameState state, StateUpdateType type, string reason, T details)
+        {
+            return new GameStateUpdate<T>() { State = state, Details = details, Reason = reason, Type = type };
+        }
     }
 }

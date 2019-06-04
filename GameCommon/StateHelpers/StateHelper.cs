@@ -18,7 +18,7 @@ namespace GameCommon.StateHelpers
         // 
         // Internal vars
         // 
-        readonly string m_perspectiveUserName;
+        string m_perspectiveUserName;
         readonly GameState m_state;
 
         public StateHelper(GameState state, string fromPerspectiveUserName)
@@ -38,6 +38,11 @@ namespace GameCommon.StateHelpers
         public string GetPerspectiveUserName()
         {
             return m_perspectiveUserName;
+        }
+
+        public void SetPerspectiveUserName(string newUserName)
+        {
+            m_perspectiveUserName = newUserName;
         }
 
         public string Validate()
