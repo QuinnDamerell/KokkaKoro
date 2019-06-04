@@ -32,5 +32,13 @@ namespace GameCommon
 
         // The market is the set of cards that are currently available for purchase.
         public Marketplace Market;
+
+        //
+        // Helpers
+        //
+        public StateHelper GetStateHelper(string contextUserName)
+        {
+            return new StateHelper(this, contextUserName);
+        }
     }
 }
