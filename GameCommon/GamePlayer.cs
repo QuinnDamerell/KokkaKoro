@@ -14,7 +14,5 @@ namespace GameCommon
 
         // The current amount of coins they have.
         public int Coins;
-
-
     }
 }

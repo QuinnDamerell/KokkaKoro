@@ -11,23 +11,39 @@ namespace GameCommon.Protocol
         // The gameId where the log updates came from.
         public Guid GameId;
 
-        // Not null if this log entry is a game update.
-        public GameUpdate Update;
+        // Not null if this log entry is a game state update.
+        public GameStateUpdate StateUpdate;
 
         // Not null if this log entry is a game action request to a player.
-        public GameActionRequest ActionRequest;         
+        public GameActionRequest ActionRequest;
+
+        // Not null if this log entry is a user trying to take an action.
+        public GameAction<object> Action;
+
+        // Not null if this log entry is due to an error.
+        public GameError Error;
 
         //
         // Helpers
         // 
-        public static GameLog CreateGameUpdate(GameState state, string message)
+        public static GameLog CreateGameStateUpdate(GameState state, StateUpdateType type, string message)
         {
-            return new GameLog() { Update = new GameUpdate() { State = state, UpdateText = message } };
+            return new GameLog() { StateUpdate = new GameStateUpdate() { State = state, Type = type, Reason = message } };
         }
 
         public static GameLog CreateActionRequest(GameState state, List<GameActionType> actions)
         {
             return new GameLog() { ActionRequest = new GameActionRequest() { State = state, PossibleActions = actions } };
+        }
+
+        public static GameLog CreateAction(GameState state, GameAction<object> action)
+        {
+            return new GameLog() { Action = action } ;
+        }
+
+        public static GameLog CreateError(GameError error)
+        {
+            return new GameLog() { Error = error };
         }
     }
 }

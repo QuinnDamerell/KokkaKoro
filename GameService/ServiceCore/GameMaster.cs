@@ -436,10 +436,16 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
             }
 
+            var type = request.CommandOptions.Action.Options.GetType();
+
             // Validate
             if (request.CommandOptions == null)
             {
                 return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (request.CommandOptions.Action == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("An action in the options is required.");
             }
             if (request.CommandOptions.GameId.Equals(Guid.Empty))
             {
@@ -454,7 +460,7 @@ namespace GameService.ServiceCore
             }
 
             // Try to start it.
-            SendGameActionResponse response = game.SendGameAction(command, userName);
+            SendGameActionResponse response = game.SendGameAction(request.CommandOptions.Action, userName);
             return KokkaKoroResponse<object>.CreateResult(response);
         }
 
