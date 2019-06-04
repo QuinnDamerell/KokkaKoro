@@ -2,6 +2,7 @@
 using ServiceProtocol;
 using ServiceSdk;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
@@ -36,6 +37,10 @@ namespace KokkaKoro
         CancellationTokenSource m_readLoopCancellationToken = new CancellationTokenSource();
         Dictionary<int, PendingRequest> m_pendingRequests = new Dictionary<int, PendingRequest>();
         SemaphoreSlim m_sendingSemaphore = new SemaphoreSlim(1);
+        CancellationTokenSource m_broadcastQueueCancellationToken = new CancellationTokenSource();
+        BlockingCollection<string> m_broadcastMessageQueue = new BlockingCollection<string>();
+        Thread m_readLoop;
+        Thread m_broadcastMessageLoop;
 
         public KokkaKoroClientWebsocket(IWebSocketHandler handler)
         {
@@ -66,7 +71,10 @@ namespace KokkaKoro
                 }
 
                 // Start the read loop.
-                ReadLoop();
+                m_readLoop = new Thread(ReadLoop);
+                m_readLoop.Start();
+                m_broadcastMessageLoop = new Thread(BroadcastMessageLoop);
+                m_broadcastMessageLoop.Start();
 
                 Logger.Info($"Connected to {url}");
             }
@@ -103,7 +111,7 @@ namespace KokkaKoro
                     }
 
                     // Handle the message
-                    await HandleNewMessage(Encoding.UTF8.GetString(message.ToArray()));
+                    HandleNewMessage(Encoding.UTF8.GetString(message.ToArray()));
                 }
                 catch(Exception e)
                 {
@@ -114,7 +122,32 @@ namespace KokkaKoro
             }
         }
 
-        private async Task HandleNewMessage(string msg)
+        private async void BroadcastMessageLoop()
+        {
+            while(m_state != WebsocketState.Disconnected)
+            {
+                try
+                {
+                    // This thread will sit here and wait until we get a broadcast message.
+                    string message = m_broadcastMessageQueue.Take(m_broadcastQueueCancellationToken.Token);
+
+                    if(String.IsNullOrWhiteSpace(message))
+                    {
+                        // This probably means the loop will exit.
+                        continue;
+                    }
+
+                    // Handle the message.
+                    await m_handler.OnGameUpdates(message);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Exception thrown in the BroadcastMessageLoop loop.", e);
+                }
+            }
+        }
+
+        private void HandleNewMessage(string msg)
         {
             Logger.Info($"<- {msg}");
 
@@ -122,7 +155,9 @@ namespace KokkaKoro
             KokkaKoroResponse<object> response = JsonConvert.DeserializeObject<KokkaKoroResponse<object>>(msg);
             if(response.Type == KokkaKoroResponseType.GameLogsUpdate)
             {
-                await m_handler.OnGameUpdates(msg);
+                // Since the client can make calls in the middle of handing the broadcasts, we need to let a different thread do the 
+                // work so we don't block the receive thread.
+                m_broadcastMessageQueue.Add(msg);
             }
             else
             {
@@ -176,6 +211,7 @@ namespace KokkaKoro
 
             // Stop the read loop.
             m_readLoopCancellationToken.Cancel();
+            m_broadcastQueueCancellationToken.Cancel();
 
             // Send a close message
             if (m_websocket != null)

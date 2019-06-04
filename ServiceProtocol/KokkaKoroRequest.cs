@@ -37,8 +37,12 @@ namespace ServiceProtocol
         [EnumMember(Value = "StartGame")]
         StartGame = 6,
 
+        // Sends an action to a game.
+        [EnumMember(Value = "SendGameAction")]
+        SendGameAction = 7,
+
         [EnumMember(Value = "SpecateGame")]
-        SpecateGame = 7,
+        SpecateGame = 8
     }
 
     public class KokkaKoroRequest<T>

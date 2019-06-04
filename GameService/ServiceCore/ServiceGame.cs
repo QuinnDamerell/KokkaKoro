@@ -202,7 +202,7 @@ namespace GameService.ServiceCore
                 }
 
                 // Make sure the user we found is a bot that's connecting, if not deny them.
-                if(!foundUser.IsBot())
+                if(foundUser != null && !foundUser.IsBot())
                 {
                     return KokkaKoroResponse<object>.CreateError($"This user has already joined the game.");
                 }

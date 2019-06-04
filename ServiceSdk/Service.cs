@@ -238,7 +238,6 @@ namespace KokkaKoro
                 throw new KokkaKoroException("A GameId is required.!", false);
             }
 
-
             // Build the request
             KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
             {
@@ -251,6 +250,31 @@ namespace KokkaKoro
 
             // Pull out the list to return.
             return response.Data.Game;
+        }
+
+        public async Task<SendGameActionResponse> SendGameAction(SendGameActionOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if (options.GameId.Equals(Guid.Empty))
+            {
+                throw new KokkaKoroException("A GameId is required.!", false);
+            }
+
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.SendGameAction,
+                CommandOptions = options
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<SendGameActionResponse> response = await MakeRequest<SendGameActionResponse>(request, "send game action");
+
+            // Pull out the list to return.
+            return response.Data;
         }
 
         #endregion
