@@ -23,6 +23,11 @@ namespace GameCommon.Protocol
 
         [EnumMember(Value = "UknownAction")]
         UknownAction,
+
+        [EnumMember(Value = "InvalidActionOptions")]
+        InvalidActionOptions,
+
+
     }
 
     public class GameError : Exception

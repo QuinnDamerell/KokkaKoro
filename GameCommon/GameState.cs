@@ -9,10 +9,29 @@ namespace GameCommon
         Base
     }
 
-    public enum TurnState
+    public class TurnState
     {
-        WaitingOnRoll,
-        WaitingOnBuyDecision
+        // The index into the Players list of the current player.
+        public int PlayerIndex;
+
+        // How many rolls the current user has preformed.
+        public int Rolls;
+
+        // Indicates if the player has bought a building on this turn or not.
+        public bool HasBougthBuilding;
+
+        // 
+        public TurnState()
+        {
+            Clear(0);
+        }
+
+        public void Clear(int newPlayerIndex)
+        {
+            PlayerIndex = newPlayerIndex;
+            Rolls = 0;
+            HasBougthBuilding = false;
+        }
     }
 
     public class GameState
@@ -24,11 +43,8 @@ namespace GameCommon
         // The players are ordered by turn order.
         public List<GamePlayer> Players = new List<GamePlayer>();
 
-        // An index to the player who's turn it currently is.
-        public int CurrentPlayerIndex = 0;
-
-        // The current state of the current player.
-        public TurnState TurnState;
+        // The current state of the current player's turn.
+        public TurnState CurrentTurnState = new TurnState();
 
         // The market is the set of cards that are currently available for purchase.
         public Marketplace Market;
@@ -36,9 +52,12 @@ namespace GameCommon
         //
         // Helpers
         //
-        public StateHelper GetStateHelper(string contextUserName)
+
+        // Returns a state helper where questions are answered from the perspective of the given
+        // username.
+        public StateHelper GetStateHelper(string perspectiveUserName)
         {
-            return new StateHelper(this, contextUserName);
+            return new StateHelper(this, perspectiveUserName);
         }
     }
 }

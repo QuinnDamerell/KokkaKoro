@@ -7,9 +7,13 @@ namespace GameCommon.Protocol
 {
     public enum GameActionType
     {
-        // The first action requested by the game host.
+        // Tells the server to roll or re-roll the dice.
         [EnumMember(Value = "RollDice")]
-        RollDice
+        RollDice,
+
+        // Tells the server the client wishes to build a building.
+        [EnumMember(Value = "BuyBuilding")]
+        BuyBuilding,
     }
 
     public class GameActionRequest

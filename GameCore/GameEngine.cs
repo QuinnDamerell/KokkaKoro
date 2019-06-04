@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using GameCommon;
 using GameCommon.Protocol;
+using GameCommon.Protocol.ActionOptions;
+using GameCommon.StateHelpers;
+using Newtonsoft.Json.Linq;
 
 namespace GameCore
 {
@@ -72,10 +75,13 @@ namespace GameCore
             // If there are any errors handling the action, they should throw the GameError exception which will be added to the
             // game log automatically.
 
+            // Build a state helper.
+            StateHelper stateHelper = m_state.GetStateHelper(userName);
+
             // Check if this is the first action on the game.
             if (!m_gameStarted)
             {
-                StartGame(actionLog);
+                StartGame(actionLog, stateHelper);
                 return;
             }
 
@@ -83,11 +89,12 @@ namespace GameCore
             actionLog.Add(GameLog.CreateAction(m_state, action));
 
             // Make sure it's this user's turn.
-            ValidateUserTurn(action, userName);
+            ValidateUserTurn(action, stateHelper);
 
             switch(action.Action)
             {
                 case GameActionType.RollDice:
+                    HandleRollDiceAction(actionLog, action, stateHelper);
                     break;
                 default:
                     throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
@@ -98,7 +105,7 @@ namespace GameCore
             // TODO
         }
 
-        private void StartGame(List<GameLog> log)
+        private void StartGame(List<GameLog> log, StateHelper stateHelper)
         {
             m_gameStarted = true;
 
@@ -106,7 +113,7 @@ namespace GameCore
             log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.GameStart, "Game Starting!"));
 
             // And add a request for the first player to go.
-            BuildPlayerActionRequest(log);
+            BuildPlayerActionRequest(log, stateHelper);
         }
 
         private void SetupGame(List<InitalPlayer> players, GameMode mode)
@@ -119,35 +126,28 @@ namespace GameCore
                 m_state.Players.Add(new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3 });
             }
 
+            // Setup the current player object
+            m_state.CurrentTurnState = new TurnState();
+            m_state.CurrentTurnState.PlayerIndex = 0;
+            m_state.CurrentTurnState.Clear(0);
+            
             // Give each player their starting building
 
 
             // Adding building to the marketplace     
-
-            // Init the rest of the state
-            m_state.CurrentPlayerIndex = 0;
-            m_state.TurnState = TurnState.WaitingOnRoll;
         }
 
-        private void ValidateUserTurn(GameAction<object> action, string userName)
+        private void ValidateUserTurn(GameAction<object> action, StateHelper stateHelper)
         {
             // Next make sure we have a user and it's their turn.
-            bool foundUser = false;
-            for (int i = 0; i < m_state.Players.Count; i++)
+            int playerIndex = stateHelper.Player.GetPlayerIndex();
+            if(playerIndex == -1)
             {
-                if (m_state.Players[i].UserName.Equals(userName))
-                {
-                    foundUser = true;
-                    if (i != m_state.CurrentPlayerIndex)
-                    {
-                        throw GameError.Create(m_state, ErrorTypes.NotPlayersTurn, $"`{userName}` tried to send a action when it's not their turn.", false);
-                    }
-                    break;
-                }
+                throw GameError.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{stateHelper.GetPerspectiveUserName()}` user name wasn't found in this game.", false);
             }
-            if (!foundUser)
+            if(!stateHelper.CurrentTurn.IsMyTurn())
             {
-                throw GameError.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{userName}` user name wasn't found in this game.", false);
+                throw GameError.Create(m_state, ErrorTypes.NotPlayersTurn, $"`{stateHelper.GetPerspectiveUserName()}` tried to send a action when it's not their turn.", false);
             }
 
             // Next, make sure we have an action.
@@ -157,19 +157,41 @@ namespace GameCore
             }
         }
 
-        private void BuildPlayerActionRequest(List<GameLog> log)
+        private void BuildPlayerActionRequest(List<GameLog> log, StateHelper stateHelper)
         {
             // Based on the current state, build a list of possible actions.
-            List<GameActionType> actions = new List<GameActionType>();
-            switch(m_state.TurnState)
-            {
-                case TurnState.WaitingOnRoll:
-                    actions.Add(GameActionType.RollDice);
-                    break;
-            }
+            List<GameActionType> actions = stateHelper.CurrentTurn.GetPossibleActions();
 
             // Build a action request object
             log.Add(GameLog.CreateActionRequest(m_state, actions));
+        }
+
+        private void HandleRollDiceAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
+        {
+            // Try to get the options
+            RollDiceOptions options = null;
+            try
+            {
+                if(action.Options is JObject obj)
+                {
+                    options = obj.ToObject<RollDiceOptions>();
+                }
+            }
+            catch(Exception e)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse roll dice options: {e.Message}", true);
+            }
+            if(options.DiceCount < 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Number of dice to roll must be > 0", true);
+            }
+            if(options.DiceCount > stateHelper.Player.MaxDiceCountCanRoll())
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't has a max of {stateHelper.Player.MaxDiceCountCanRoll()} they can roll currently.", true);
+            }
+
+            // todo
+
         }
     }
 }
