@@ -15,7 +15,7 @@ namespace GameCommon.StateHelpers
         public PlayerHelper Player;
         public CurrentTurnHelper CurrentTurn;
         public MarketplaceHelper Marketplace;
-        public BuildingList BuildingRules;
+        public BuildingRules BuildingRules;
 
         // 
         // Internal vars
