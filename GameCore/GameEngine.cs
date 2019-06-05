@@ -22,6 +22,7 @@ namespace GameCore
         bool m_gameStarted = false;
         LogKeeper m_logKeeper;
         RNGCryptoServiceProvider m_random = new RNGCryptoServiceProvider();
+        object m_actionLock = new object();
 
         public GameEngine(List<InitalPlayer> players, GameMode mode)
         {
@@ -34,41 +35,46 @@ namespace GameCore
 
         public (GameActionResponse, List<GameLog>) ConsumeAction(GameAction<object> action, string userName)
         {
-            // Handle the action, 
-            List<GameLog> actionLog = new List<GameLog>();
-            try
+            // We only want to allow one action to be attempted at a time.
+            lock (m_actionLock)
             {
-                ConsumeActionInternal(action, userName, actionLog);
-            }
-            catch(GameError e)
-            {
-                // If the call throws an action exception, there was something wrong with the action. 
+                List<GameLog> actionLog = new List<GameLog>();
 
-                // Add the error to the log.
-                actionLog.Add(GameLog.CreateError(e));
+                // Handle the action.
+                try
+                {
+                    ConsumeActionInternal(action, userName, actionLog);
+                }
+                catch (GameError e)
+                {
+                    // If the call throws an action exception, there was something wrong with the action. 
 
-                // Return the error and the action log.                
-                return (GameActionResponse.CreateError(e), actionLog);
-            }
-            catch(Exception e)
-            {
-                // If this exception was thrown, it's most likely a bug.  
+                    // Add the error to the log.
+                    actionLog.Add(GameLog.CreateError(e));
 
-                // Create an error and add it to the log.
-                GameError err = GameError.Create(m_state, ErrorTypes.Unknown, $"An exception was thrown while handling action. {e.Message}", false);
-                actionLog.Add(GameLog.CreateError(err));
-                
-                // Return the error.
-                return (GameActionResponse.CreateError(err), actionLog);
-            }
-            finally
-            {
-                // Make sure we add all of the events to the game log.
-                m_logKeeper.AddToLog(actionLog);
-            }   
-            
-            // On success, send  the success response and the log.
-            return (GameActionResponse.CreateSuccess(), actionLog);
+                    // Return the error and the action log.                
+                    return (GameActionResponse.CreateError(e), actionLog);
+                }
+                catch (Exception e)
+                {
+                    // If this exception was thrown, it's most likely a bug.  
+
+                    // Create an error and add it to the log.
+                    GameError err = GameError.Create(m_state, ErrorTypes.Unknown, $"An exception was thrown while handling action. {e.Message}", false);
+                    actionLog.Add(GameLog.CreateError(err));
+
+                    // Return the error.
+                    return (GameActionResponse.CreateError(err), actionLog);
+                }
+                finally
+                {
+                    // Make sure we add all of the events to the game log.
+                    m_logKeeper.AddToLog(actionLog);
+                }
+
+                // On success, send  the success response and the log.
+                return (GameActionResponse.CreateSuccess(), actionLog);
+            }            
         }
 
         private void ConsumeActionInternal(GameAction<object> action, string userName, List<GameLog> actionLog)
@@ -290,34 +296,74 @@ namespace GameCore
 
         private void HandleBuildAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
-            // This doesn't have options, so there's no need to validate them.
+            // Try to get the options
+            BuildOptions options = null;
+            try
+            {
+                if (action.Options is JObject obj)
+                {
+                    options = obj.ToObject<BuildOptions>();
+                }
+            }
+            catch (Exception e)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse build options: {e.Message}", true);
+            }
+            if (!stateHelper.Marketplace.ValidateBuildingIndex(options.BuildingIndex))
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Invalid building index set in build command.", true);
+            }
+            
+            // Validate the player is in a state where they can build this building.
+            if(!stateHelper.Player.CanBuildBuilding(options.BuildingIndex))
+            {
+                if(stateHelper.Player.CanAffordBuilding(options.BuildingIndex))
+                {
+                    throw GameError.Create(m_state, ErrorTypes.NotEnoughFunds, $"The player doesn't have enough coins to build the requested building type.", true);
+                }
+                else if(stateHelper.Player.HasReachedPerPlayerBuildingLimit(options.BuildingIndex))
+                {
+                    throw GameError.Create(m_state, ErrorTypes.PlayerMaxBuildingLimitReached, $"The player has reached the per player building limit.", true);
+                }
+                else
+                {
+                    throw GameError.Create(m_state, ErrorTypes.NotAvailableInMarketplace, $"The requested building isn't currently available in the marketplace.", true);
+                }
+            }
 
-            //// Commit the dice roll.
-            //m_state.CurrentTurnState.Rolls++;
-            //m_state.CurrentTurnState.DiceResults.Clear();
-            //int sum = 0;
-            //for (int i = 0; i < options.DiceCount; i++)
-            //{
-            //    int result = RandomInteger(1, 6);
-            //    sum += result;
-            //    m_state.CurrentTurnState.DiceResults.Add(result);
-            //}
+            // Make the transaction.
 
-            //// Validate things are good.
-            //ThrowIfInvalidState(stateHelper);
+            // Take the player's coins.
+            GamePlayer p = stateHelper.Player.GetPlayer();
+            p.Coins -= stateHelper.BuildingRules[options.BuildingIndex].GetBuildCost();
 
-            //// Create an update
-            //log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
-            //    new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+            // Add the building to the player.
+            p.OwnedBuildings[options.BuildingIndex]++;
 
-            //if (options.AutoCommitResult)
-            //{
-            //    HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
-            //}
+            // Remove an instance of it from the marketplace
+            m_state.Market.AvailableBuildable[options.BuildingIndex]--;
+
+            // Update the current turn state.
+            m_state.CurrentTurnState.HasBougthBuilding = true;
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+
+            // Create an update
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
+                new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+
+            if (options.AutoCommitResult)
+            {
+                HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
+            }
+
+
         }
 
         #endregion
 
+        #region Helpers
         private void ThrowIfInvalidState(StateHelper stateHelper)
         {
             string err = stateHelper.Validate();
@@ -345,5 +391,7 @@ namespace GameCore
 
             return (int)(minInclusive + (randomUInt % diff));
         }
+
+        #endregion
     }
 }

@@ -48,10 +48,10 @@ namespace GameCommon.StateHelpers
             return s.CurrentTurnState.Rolls < m_gameHelper.Player.GetMaxRollsAllowed();
         }
 
-        public bool CanBuyABuilding()
+        public bool HasBuildABuiding()
         {
             GameState s = m_gameHelper.GetState();
-            return !s.CurrentTurnState.HasBougthBuilding;
+            return s.CurrentTurnState.HasBougthBuilding;
         }
 
         public string GetActiveTurnPlayerUserName()
@@ -77,9 +77,14 @@ namespace GameCommon.StateHelpers
                 actions.Add(GameActionType.RollDice);
             }
 
-            if(CanBuyABuilding())
+            // Check if the player has build a building.
+            if(!HasBuildABuiding())
             {
-                actions.Add(GameActionType.BuyBuilding);
+                // Check if there are building they can afford in the marketplace currently.
+                if(m_gameHelper.Player.AreMarketplaceBuildableBuildingsAvailableThatCanAfford())
+                {
+                    actions.Add(GameActionType.BuyBuilding);
+                }
             }
 
             return actions;

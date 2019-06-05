@@ -36,6 +36,18 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "InvalidActionOptions")]
         InvalidActionOptions,
 
+        // The requested build action failed because there weren't enough funds.
+        [EnumMember(Value = "NotEnoughFunds")]
+        NotEnoughFunds,
+
+        // The requested build action failed because the building isn't available in the marketplace.
+        [EnumMember(Value = "NotAvailableInMarketplace")]
+        NotAvailableInMarketplace,
+
+        // The requested build action failed because the user has the max number of building allowed per player.
+        [EnumMember(Value = "PlayerMaxBuildingLimitReached")]
+        PlayerMaxBuildingLimitReached,
+
         // The requested action is invalid given the current game state.
         [EnumMember(Value = "InvalidStateToTakeAction")]
         InvalidStateToTakeAction,
