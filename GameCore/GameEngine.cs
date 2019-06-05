@@ -16,7 +16,7 @@ namespace GameCore
         public string FriendlyName;
     }
 
-    public class GameEngine
+    public class GameEngine : IRandomGenerator
     {
         GameState m_state;
         bool m_gameStarted = false;
@@ -81,7 +81,8 @@ namespace GameCore
             // Build a state helper.
             StateHelper stateHelper = m_state.GetStateHelper(userName);
 
-            // Check if the game has not been started yet. This setup needs to happen first, because the validation will fail.
+            // Check if the game has not been started yet. 
+            // This setup needs to happen first, because the validation will fail.
             if (!m_gameStarted)
             {
                 StartGame(actionLog, stateHelper);
@@ -112,6 +113,8 @@ namespace GameCore
                 case GameActionType.CommitDiceResult:
                     HandleDiceRollCommitAction(actionLog, action, stateHelper);
                     break;
+                case GameActionType.BuyBuilding:
+
                 default:
                     throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
             }
@@ -121,9 +124,49 @@ namespace GameCore
             // Once the actions have been made, generate the new set of options for the player.
             BuildPlayerActionRequest(actionLog, stateHelper);
 
-
-
             // TODO
+        }
+
+        private void SetupGame(List<InitalPlayer> players, GameMode mode)
+        {
+            // Create our state object.
+            m_state = new GameState();
+            m_state.Mode = mode;   
+
+            // Setup current state.
+            m_state.CurrentTurnState = new TurnState();
+
+            // Create a temp building list we will use to setup the marketplace
+            BuildingList buildingList = new BuildingList(mode);
+
+            // Setup the marketplace
+            m_state.Market = Marketplace.Create(buildingList);
+
+            // Add the players.
+            foreach (InitalPlayer p in players)
+            {
+                // Create a player.
+                GamePlayer gamePlayer = new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3 };
+
+                // Allocate a space for every building they can own. For starting buildings, give them one.
+                for (int i = 0; i < buildingList.GetCount(); i++)
+                {
+                    if (buildingList[i].IsStartingBuilding())
+                    {
+                        gamePlayer.OwnedBuildings.Add(1);
+                    }
+                    else
+                    {
+                        gamePlayer.OwnedBuildings.Add(0);
+                    }
+                }
+
+                // Add the player.
+                m_state.Players.Add(gamePlayer);
+            }
+
+            // Adding building to the marketplace
+            m_state.Market.ReplenishMarket(this, m_state.GetStateHelper(String.Empty));
         }
 
         private void StartGame(List<GameLog> log, StateHelper stateHelper)
@@ -137,30 +180,7 @@ namespace GameCore
             BuildPlayerActionRequest(log, stateHelper);
         }
 
-        private void SetupGame(List<InitalPlayer> players, GameMode mode)
-        {
-            m_state = new GameState();
 
-            // Add the players
-            foreach(InitalPlayer p in players)
-            {
-                m_state.Players.Add(new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3 });
-            }
-
-            // Setup the current player object
-            m_state.CurrentTurnState = new TurnState();
-            m_state.CurrentTurnState.PlayerIndex = 0;
-            m_state.CurrentTurnState.Clear(0);
-
-            // Init the marketplace
-            m_state.Market = new Marketplace();
-
-            
-            // Give each player their starting building
-
-
-            // Adding building to the marketplace     
-        }
 
         private void ValidateUserTurn(GameAction<object> action, StateHelper stateHelper)
         {
@@ -210,9 +230,9 @@ namespace GameCore
             {
                 throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Number of dice to roll must be > 0", true);
             }
-            if (options.DiceCount > stateHelper.Player.MaxDiceCountCanRoll())
+            if (options.DiceCount > stateHelper.Player.GetMaxDiceCountCanRoll())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.MaxDiceCountCanRoll()} currently.", true);
+                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.GetMaxDiceCountCanRoll()} currently.", true);
             }
 
             // Roll the dice!
@@ -221,7 +241,7 @@ namespace GameCore
             int sum = 0;
             for (int i = 0; i < options.DiceCount; i++)
             {
-                int result = RandomInteger(1, 6);
+                int result = RandomInt(1, 6);
                 sum += result;
                 m_state.CurrentTurnState.DiceResults.Add(result);
             }
@@ -277,18 +297,22 @@ namespace GameCore
             }
         }
 
-        private int RandomInteger(int min, int max)
+        // Returns a random int.
+        public int RandomInt(int minInclusive, int maxInclusive)
         {
-            uint scale = uint.MaxValue;
-            while (scale == uint.MaxValue)
-            {
-                byte[] four_bytes = new byte[4];
-                m_random.GetBytes(four_bytes);
-                scale = BitConverter.ToUInt32(four_bytes, 0);
-            }
+            int maxExclusive = maxInclusive + 1;
+            long diff = (long)maxExclusive - minInclusive;
+            long upperBound = uint.MaxValue / diff * diff;
 
-            // Add min to the scaled difference between max and min.
-            return (int)(min + (max - min) * ((double)scale / (double)uint.MaxValue));
+            uint randomUInt;
+            do
+            {
+                byte[] buffer = new byte[4];
+                m_random.GetBytes(buffer);
+                randomUInt = BitConverter.ToUInt32(buffer, 0);     
+            } while (randomUInt >= upperBound);
+
+            return (int)(minInclusive + (randomUInt % diff));
         }
     }
 }

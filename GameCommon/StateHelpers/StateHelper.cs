@@ -14,6 +14,8 @@ namespace GameCommon.StateHelpers
         //
         public PlayerHelper Player;
         public CurrentTurnHelper CurrentTurn;
+        public MarketplaceHelper Marketplace;
+        public BuildingList Buildings;
 
         // 
         // Internal vars
@@ -25,6 +27,11 @@ namespace GameCommon.StateHelpers
         {
             Player = new PlayerHelper(this);
             CurrentTurn = new CurrentTurnHelper(this);
+            Marketplace = new MarketplaceHelper(this);
+            if (state != null)
+            {
+                Buildings = new BuildingList(state.Mode);
+            }
 
             m_state = state;
             m_perspectiveUserName = fromPerspectiveUserName;
@@ -56,7 +63,7 @@ namespace GameCommon.StateHelpers
             {
                 return "No perspective user name";
             }
-            if(m_state.Market == null || m_state.Players == null || m_state.CurrentTurnState == null)
+            if(m_state.Market == null || m_state.Players == null || m_state.CurrentTurnState == null || Buildings == null)
             {
                 return "State objects are null.";
             }
@@ -81,6 +88,12 @@ namespace GameCommon.StateHelpers
             {
                 return response;
             }
+
+            response = Marketplace.Validate();
+            if (!String.IsNullOrWhiteSpace(response))
+            {
+                return response;
+            }            
             return null;
         }
     }

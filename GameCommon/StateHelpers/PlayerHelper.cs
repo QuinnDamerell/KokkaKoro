@@ -58,12 +58,12 @@ namespace GameCommon.StateHelpers
             return s.Players[index].UserName;
         }
 
-        public int MaxRollsAllowed(string userName = null)
+        public int GetMaxRollsAllowed(string userName = null)
         {
             return 1;
         }
 
-        public int MaxDiceCountCanRoll(string userName = null)
+        public int GetMaxDiceCountCanRoll(string userName = null)
         {
             return 1;
         }

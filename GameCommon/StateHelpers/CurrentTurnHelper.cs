@@ -21,7 +21,7 @@ namespace GameCommon.StateHelpers
             {
                 return "Current turn state player index is out of bounds.";
             }
-            if (s.CurrentTurnState.Rolls < 0 || s.CurrentTurnState.Rolls > m_gameHelper.Player.MaxRollsAllowed())
+            if (s.CurrentTurnState.Rolls < 0 || s.CurrentTurnState.Rolls > m_gameHelper.Player.GetMaxRollsAllowed())
             {
                 return "The current turn state rolls is to high or low for the current player.";
             }
@@ -29,7 +29,7 @@ namespace GameCommon.StateHelpers
             {
                 return "The current turn has rolls but no dice value.";
             }
-            if(s.CurrentTurnState.DiceResults.Count > m_gameHelper.Player.MaxDiceCountCanRoll())
+            if(s.CurrentTurnState.DiceResults.Count > m_gameHelper.Player.GetMaxDiceCountCanRoll())
             {
                 return "There are more dice results than then player can currently roll dice.";
             }
@@ -45,7 +45,7 @@ namespace GameCommon.StateHelpers
         public bool CanRollOrReRoll()
         {
             GameState s = m_gameHelper.GetState();
-            return s.CurrentTurnState.Rolls < m_gameHelper.Player.MaxRollsAllowed();
+            return s.CurrentTurnState.Rolls < m_gameHelper.Player.GetMaxRollsAllowed();
         }
 
         public bool CanBuyABuilding()
