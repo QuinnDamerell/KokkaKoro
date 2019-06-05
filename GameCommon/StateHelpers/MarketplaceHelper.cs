@@ -23,7 +23,11 @@ namespace GameCommon.StateHelpers
         // Returns the number of unique building types are still available in the game.
         public int GetCountOfAvailableUniqueBuidingTypesInGame()
         {
+            GameState s = m_gameHelper.GetState();
+            for (int b = 0; b < m_gameHelper.Buildings.GetCount(); b++)
+            {
 
+            }
         }
 
         // Returns the number of building types are still available in the game.

@@ -30,6 +30,9 @@ namespace GameCommon
         public void ReplenishMarket(IRandomGenerator randomGen, StateHelper stateHelper)
         {
 
+
+            while()
+
         }
     }
 }
