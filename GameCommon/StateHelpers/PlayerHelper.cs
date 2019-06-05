@@ -16,6 +16,14 @@ namespace GameCommon.StateHelpers
         public string Validate()
         {
             GameState s = m_gameHelper.GetState();
+            if(s.Players == null)
+            {
+                return "Players object is null";
+            }
+            if(s.Players.Count == 0)
+            {
+                return "There are no players";
+            }
             foreach (GamePlayer p in s.Players)
             {
                 if (String.IsNullOrWhiteSpace(p.Name) || String.IsNullOrWhiteSpace(p.UserName))
@@ -25,6 +33,21 @@ namespace GameCommon.StateHelpers
                 if (p.Coins < 0)
                 {
                     return $"User {p.UserName} has less than 0 coins";
+                }
+                if(p.OwnedBuildings == null)
+                {
+                    return $"Player {p.UserName} owned buildings object is null";
+                }
+                if(p.OwnedBuildings.Count != m_gameHelper.BuildingRules.GetCountOfUniqueTypes())
+                {
+                    return $"Player {p.UserName}'s owned building list is too short";
+                }
+                foreach(int i in p.OwnedBuildings)
+                {
+                    if(i < 0)
+                    {
+                        return $"Player {p.UserName}'s building count for building {i} is < 0";
+                    }
                 }
             }
             return null;

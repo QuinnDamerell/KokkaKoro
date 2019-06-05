@@ -6,35 +6,73 @@ namespace GameCommon.Buildings
 {
     class WheatField : BuildingBase
     {
+        internal WheatField()
+        { }
+
+        // See comments in base class. (BuildingBase.cs)
         public override string GetName()
         {
-            return "WheatField";
+            return "Wheat Field";
         }
 
+        // See comments in base class. (BuildingBase.cs)
         public override string GetRule()
         {
             return "Get 1 coin from the bank. (anyone's turn)";
         }
 
+        // See comments in base class. (BuildingBase.cs)
         public override (int, int) GetActivationRange()
         {
             return (1, 1);
         }
 
-        public override int GetCoinsAnyonesTurn(int diceValue)
+        // See comments in base class. (BuildingBase.cs)
+        public override int GetBuildCost()
         {
-            if (IsDiceInRange(diceValue))
-            {
-                return 1;
-            }
-            return 0;
+            return 1;
         }
 
+        // See comments in base class. (BuildingBase.cs)
+        internal override int InternalGetMaxBuildingCountInGame()
+        {
+            return 7;
+        }
+
+        // See comments in base class. (BuildingBase.cs)
+        internal override int InternalGetMaxBuildingCountPerPlayer()
+        {
+            return -1;
+        }
+
+        // See comments in base class. (BuildingBase.cs)
+        public override EstablishmentProduction GetEstablishmentProduction()
+        {
+            return EstablishmentProduction.Wheat;
+        }
+
+        // See comments in base class. (BuildingBase.cs)
+        public override EstablishmentColor GetEstablishmentColor()
+        {
+            return EstablishmentColor.Blue;
+        }
+
+        // See comments in base class. (BuildingBase.cs)
+        public override bool IsStartingBuilding()
+        {
+            return true;
+        }
+
+        // See comments in base class. (BuildingBase.cs)
         public override int GetCoinsOnMyTurn(int diceValue)
         {
             return 0;
         }
 
-      
+        // See comments in base class. (BuildingBase.cs)
+        public override int GetCoinsAnyonesTurn(int diceValue)
+        {
+            return 1;
+        }
     }
 }

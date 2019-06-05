@@ -63,7 +63,7 @@ namespace GameCommon.StateHelpers
             {
                 return "No perspective user name";
             }
-            if(m_state.Market == null || m_state.Players == null || m_state.CurrentTurnState == null || Buildings == null)
+            if(m_state.Market == null || m_state.Players == null || m_state.CurrentTurnState == null || BuildingRules == null)
             {
                 return "State objects are null.";
             }

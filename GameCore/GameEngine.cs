@@ -114,7 +114,8 @@ namespace GameCore
                     HandleDiceRollCommitAction(actionLog, action, stateHelper);
                     break;
                 case GameActionType.BuyBuilding:
-
+                    HandleBuildAction(actionLog, action, stateHelper);
+                    break;
                 default:
                     throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
             }
@@ -137,10 +138,10 @@ namespace GameCore
             m_state.CurrentTurnState = new TurnState();
 
             // Create a temp building list we will use to setup the marketplace
-            BuildingList buildingList = new BuildingList(mode);
+            BuildingRules buildingRules = new BuildingRules(mode);
 
             // Setup the marketplace
-            m_state.Market = Marketplace.Create(buildingList);
+            m_state.Market = Marketplace.Create(buildingRules);
 
             // Add the players.
             foreach (InitalPlayer p in players)
@@ -149,9 +150,9 @@ namespace GameCore
                 GamePlayer gamePlayer = new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3 };
 
                 // Allocate a space for every building they can own. For starting buildings, give them one.
-                for (int i = 0; i < buildingList.GetCount(); i++)
+                for (int i = 0; i < buildingRules.GetCountOfUniqueTypes(); i++)
                 {
-                    if (buildingList[i].IsStartingBuilding())
+                    if (buildingRules[i].IsStartingBuilding())
                     {
                         gamePlayer.OwnedBuildings.Add(1);
                     }
@@ -179,8 +180,6 @@ namespace GameCore
             // And add a request for the first player to go.
             BuildPlayerActionRequest(log, stateHelper);
         }
-
-
 
         private void ValidateUserTurn(GameAction<object> action, StateHelper stateHelper)
         {
@@ -210,6 +209,8 @@ namespace GameCore
             // Build a action request object
             log.Add(GameLog.CreateActionRequest(m_state, actions));
         }
+
+        #region Action Handlers
 
         private void HandleRollDiceAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
@@ -286,6 +287,36 @@ namespace GameCore
             //    HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
             //}
         }
+
+        private void HandleBuildAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
+        {
+            // This doesn't have options, so there's no need to validate them.
+
+            //// Commit the dice roll.
+            //m_state.CurrentTurnState.Rolls++;
+            //m_state.CurrentTurnState.DiceResults.Clear();
+            //int sum = 0;
+            //for (int i = 0; i < options.DiceCount; i++)
+            //{
+            //    int result = RandomInteger(1, 6);
+            //    sum += result;
+            //    m_state.CurrentTurnState.DiceResults.Add(result);
+            //}
+
+            //// Validate things are good.
+            //ThrowIfInvalidState(stateHelper);
+
+            //// Create an update
+            //log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
+            //    new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+
+            //if (options.AutoCommitResult)
+            //{
+            //    HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
+            //}
+        }
+
+        #endregion
 
         private void ThrowIfInvalidState(StateHelper stateHelper)
         {

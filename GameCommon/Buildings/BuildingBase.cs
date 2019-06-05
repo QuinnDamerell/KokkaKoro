@@ -4,8 +4,6 @@ using System.Text;
 
 namespace GameCommon.Buildings
 {
-    // Terminology 
-
     public enum EstablishmentColor
     {
         Blue,
@@ -17,7 +15,8 @@ namespace GameCommon.Buildings
     public enum EstablishmentProduction
     {
         None,
-        Wheat
+        Wheat,
+        Bread,
     }
     
     public abstract class BuildingBase
@@ -34,12 +33,20 @@ namespace GameCommon.Buildings
         // Returns how expensive the building is to build.
         public abstract int GetBuildCost();
 
+        // Internal because this requires game state specific logic. 
+        // Use StateHelper.Marketplace.GetMaxBuildableBuildingsInGame to get the value.
+        //
         // Gets the max number of this type that are allowed in the game.
-        // THIS VALUE EXCULDES STARTING BUILDINGS. USE StateHelper.Marketplace.GetMaxAllowableBuiltBuildingsInGame() for an accurate value.
-        public abstract int GetMaxBuildingCountInGame();
+        // THIS VALUE EXCULDES STARTING BUILDINGS.
+        internal abstract int InternalGetMaxBuildingCountInGame();
 
+        // Internal because this requires game state specific logic. 
+        // Use StateHelper.Marketplace.GetMaxBuildableBuildingsPerPlayer to get the value.
+        //
         // Gets the max number of buildings of this type a player can have.
-        public abstract int GetMaxBuildingCountPerPlayer();
+        // Returns -1 if the limit is max buildable in game.
+        // THIS VALUE EXCULDES STARTING BUILDINGS.
+        internal abstract int InternalGetMaxBuildingCountPerPlayer();
 
         // Returns what this building produces.
         public abstract EstablishmentProduction GetEstablishmentProduction();
