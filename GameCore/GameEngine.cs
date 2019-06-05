@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using GameCommon;
+using GameCommon.Buildings;
 using GameCommon.Protocol;
 using GameCommon.Protocol.ActionOptions;
 using GameCommon.Protocol.GameUpdateDetails;
@@ -16,12 +17,12 @@ namespace GameCore
         public string FriendlyName;
     }
 
-    public class GameEngine : IRandomGenerator
+    public class GameEngine
     {
         GameState m_state;
         bool m_gameStarted = false;
         LogKeeper m_logKeeper;
-        RNGCryptoServiceProvider m_random = new RNGCryptoServiceProvider();
+        RandomGenerator m_random = new RandomGenerator();
         object m_actionLock = new object();
 
         public GameEngine(List<InitalPlayer> players, GameMode mode)
@@ -119,19 +120,24 @@ namespace GameCore
                 case GameActionType.CommitDiceResult:
                     HandleDiceRollCommitAction(actionLog, action, stateHelper);
                     break;
-                case GameActionType.BuyBuilding:
+                case GameActionType.BuildBuilding:
                     HandleBuildAction(actionLog, action, stateHelper);
+                    break;
+                case GameActionType.EndTurn:
+                    HandleEndTurnAction(actionLog, action, stateHelper);
                     break;
                 default:
                     throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
             }
 
             // Check if the turn is over.
+            if(stateHelper.CurrentTurn.HasEndedTurn())
+            {
+                AdvanceToNextPlayer(stateHelper);
+            }
 
             // Once the actions have been made, generate the new set of options for the player.
             BuildPlayerActionRequest(actionLog, stateHelper);
-
-            // TODO
         }
 
         private void SetupGame(List<InitalPlayer> players, GameMode mode)
@@ -173,7 +179,7 @@ namespace GameCore
             }
 
             // Adding building to the marketplace
-            m_state.Market.ReplenishMarket(this, m_state.GetStateHelper(String.Empty));
+            m_state.Market.ReplenishMarket(m_random, m_state.GetStateHelper(String.Empty));
         }
 
         private void StartGame(List<GameLog> log, StateHelper stateHelper)
@@ -207,10 +213,41 @@ namespace GameCore
             }
         }
 
+        private void AdvanceToNextPlayer(StateHelper stateHelper)
+        {
+            if(m_state.CurrentTurnState.Rolls == 0 || m_state.CurrentTurnState.DiceResults.Count == 0 || !stateHelper.CurrentTurn.HasCommittedToDiceResult())
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The turn can't be advanced because the current turn hasn't rolled yet.", true);
+            }
+            if (!stateHelper.CurrentTurn.HasEndedTurn())
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The current turn isn't over, so we can't go to the next player.", false);
+            }
+
+            // Find the next player.
+            int newPlayerIndex = m_state.CurrentTurnState.PlayerIndex;
+            newPlayerIndex++;
+            if(newPlayerIndex >= m_state.Players.Count)
+            {
+                newPlayerIndex = 0;
+            }
+
+            // And finally reset the current turn and set the new player.
+            m_state.CurrentTurnState.Clear(newPlayerIndex);
+
+            // It's also super important to update the state helper with the new user perspective.
+            stateHelper.SetPerspectiveUserName(stateHelper.Player.GetPlayerUserName(newPlayerIndex));
+        }
+
         private void BuildPlayerActionRequest(List<GameLog> log, StateHelper stateHelper)
         {
             // Based on the current state, build a list of possible actions.
             List<GameActionType> actions = stateHelper.CurrentTurn.GetPossibleActions();
+
+            if(actions.Count == 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"There are no possible actions for the current player.", false);
+            }
 
             // Build a action request object
             log.Add(GameLog.CreateActionRequest(m_state, actions));
@@ -248,21 +285,21 @@ namespace GameCore
             int sum = 0;
             for (int i = 0; i < options.DiceCount; i++)
             {
-                int result = RandomInt(1, 6);
+                int result = m_random.RandomInt(1, 6);
                 sum += result;
                 m_state.CurrentTurnState.DiceResults.Add(result);
-            }
+            }  
+
+            // Create an update
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.RollDiceResult, $"Player {stateHelper.Player.GetPlayerName()} rolled {sum}.",
+                new RollDiceDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayerIndex() }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
 
-            // Create an update
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
-                new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
-
             if (options.AutoCommitResult)
             {
-                HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
+                HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResultAction(), stateHelper);
             }
         }
 
@@ -270,39 +307,52 @@ namespace GameCore
         {
             // This doesn't have options, so there's no need to validate them.
 
-            //// Commit the dice roll.
-            //m_state.CurrentTurnState.Rolls++;
-            //m_state.CurrentTurnState.DiceResults.Clear();
-            //int sum = 0;
-            //for (int i = 0; i < options.DiceCount; i++)
-            //{
-            //    int result = RandomInteger(1, 6);
-            //    sum += result;
-            //    m_state.CurrentTurnState.DiceResults.Add(result);
-            //}
+            // Make sure we are in a valid state to do this.
+            if(stateHelper.CurrentTurn.HasCommittedToDiceResult())
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has already committed the dice result.", true);
+            }
+            if(m_state.CurrentTurnState.DiceResults.Count == 0 || m_state.CurrentTurnState.Rolls == 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't commit the results.", true);
+            }
 
-            //// Validate things are good.
-            //ThrowIfInvalidState(stateHelper);
+            // Commit the dice result.
+            m_state.CurrentTurnState.HasCommitedDiceResult = true;
 
-            //// Create an update
-            //log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
-            //    new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+            // Format a nice string.
+            string rollStr = "[";
+            bool first = true;
+            foreach(int r in m_state.CurrentTurnState.DiceResults)
+            {
+                if(!first)
+                {
+                    rollStr += ",";
+                }
+                first = false;
+                rollStr += r;
+            }
+            rollStr += "]";
 
-            //if (options.AutoCommitResult)
-            //{
-            //    HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
-            //}
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.CommitDiceResults, $"Player {stateHelper.Player.GetPlayerName()} committed their roll of {rollStr} after {m_state.CurrentTurnState.Rolls} rolls.",
+                new CommitDiceResultsDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayerIndex(), Rolls = m_state.CurrentTurnState.Rolls }));
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+
+            // Let the earn income logic run
+            EarnIncome(log, stateHelper); 
         }
 
         private void HandleBuildAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
             // Try to get the options
-            BuildOptions options = null;
+            BuildBuildingOptions options = null;
             try
             {
                 if (action.Options is JObject obj)
                 {
-                    options = obj.ToObject<BuildOptions>();
+                    options = obj.ToObject<BuildBuildingOptions>();
                 }
             }
             catch (Exception e)
@@ -345,25 +395,161 @@ namespace GameCore
 
             // Update the current turn state.
             m_state.CurrentTurnState.HasBougthBuilding = true;
+            
+            // Create an update
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.BuildBuilding, $"Player {stateHelper.Player.GetPlayerName()} build a {stateHelper.BuildingRules[options.BuildingIndex].GetName()}.",
+                new BuildBuildingDetails() { PlayerIndex = stateHelper.Player.GetPlayerIndex(), BuildingIndex = options.BuildingIndex }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
 
-            // Create an update
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.DiceRollResult, $"Player {stateHelper.GetPerspectiveUserName()} rolled {sum}.",
-                new DiceRollDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, RolledForPlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+            if (options.AutoEndTurn)
+            {                
+                HandleEndTurnAction(log, GameAction<object>.CreateEndTurnAction(), stateHelper);
+            }
+        }
 
-            if (options.AutoCommitResult)
+        private void HandleEndTurnAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
+        {
+            // This doesn't have options, so there's no need to validate them.
+
+            // Make sure we are in a valid state to do this.
+            if (!stateHelper.CurrentTurn.HasCommittedToDiceResult())
             {
-                HandleDiceRollCommitAction(log, GameAction<object>.CreateCommitDiceResult(), stateHelper);
+                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has not committed a dice roll yet.", true);
+            }
+            if (m_state.CurrentTurnState.DiceResults.Count == 0 || m_state.CurrentTurnState.Rolls == 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't end their turn.", true);
             }
 
+            // Note: It's ok to end the turn without buying.
 
+            // End the turn.
+            m_state.CurrentTurnState.HasEndedTurn = true;
+
+            // Log it.
+            log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.EndTurn, $"Player {stateHelper.Player.GetPlayerName()} has ended their turn.", null));
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
         }
 
         #endregion
 
         #region Helpers
+
+        private void EarnIncome(List<GameLog> log, StateHelper stateHelper)
+        {
+            // Validate state.
+            if(!stateHelper.CurrentTurn.HasCommittedToDiceResult())
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when a dice result wasn't committed.", false);
+            }
+            if(m_state.CurrentTurnState.Rolls == 0 || m_state.CurrentTurnState.DiceResults.Count == 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when there were no dice results.", false);
+            }
+
+            // Get the sum of the roll.
+            int diceSum = 0;
+            foreach(int r in m_state.CurrentTurnState.DiceResults)
+            {
+                diceSum += r;
+            }
+
+            // First, we must resolve red buildings.
+            //for (int b = 0; b < stateHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
+            //{
+            //    BuildingBase building = stateHelper.BuildingRules[b];
+            //    if (building.GetEstablishmentColor() == EstablishmentColor.Red)
+            //    {
+            //        // Check to see if it activated.
+            //        if (building.IsDiceInRange(diceSum))
+            //        {
+            //            ExecuteBuildingIncome(log, stateHelper, b);
+            //        }
+            //    }
+            //}
+
+            // Now build and green.
+            for (int b = 0; b < stateHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
+            {
+                BuildingBase building = stateHelper.BuildingRules[b];
+                EstablishmentColor color = building.GetEstablishmentColor();
+                if (color == EstablishmentColor.Green || color == EstablishmentColor.Blue)
+                {
+                    // Check to see if it activated.
+                    if (building.IsDiceInRange(diceSum))
+                    {
+                        ExecuteBuildingIncome(log, stateHelper, b);
+                    }
+                }
+            }
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+        }
+
+
+        private void ExecuteBuildingIncome(List<GameLog> log, StateHelper stateHelper, int buildingIndex)
+        {
+            if(!stateHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Tried to execute building income on a building index out of range.", false);
+            }
+
+            BuildingBase building = stateHelper.BuildingRules[buildingIndex];
+            switch(building.GetEstablishmentColor())
+            {
+                case EstablishmentColor.Blue:
+                    {
+                        // Blue buildings earn income on anyone's turn. So apply the building to anyone who has it.
+                        foreach (GamePlayer player in m_state.Players)
+                        {
+                            int coinsEarned = stateHelper.Player.GetIncomeOnAnyonesTurn(buildingIndex, player.UserName);
+
+                            // If they earned coins, report it.
+                            if (coinsEarned != 0)
+                            {
+                                player.Coins += coinsEarned;
+                                log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.EarnIncome, $"{player.Name} earned {coinsEarned} from {player.OwnedBuildings[buildingIndex]} {building.GetName()}(s)",
+                                            new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = coinsEarned, PlayerIndex = stateHelper.Player.GetPlayerIndex(player.UserName) }));
+                            }
+                        }
+                        break;
+                    }
+                case EstablishmentColor.Green:
+                    {
+                        // Green buildings only earn on the player's turn.
+                        GamePlayer player = stateHelper.Player.GetPlayer(stateHelper.CurrentTurn.GetActiveTurnPlayerUserName());
+
+                        // Check if the player earns anything.
+                        int coinsEarned = stateHelper.Player.GetIncomeOnMyTurn(buildingIndex, player.UserName);
+
+                        // If they earned coins, report it.
+                        if (coinsEarned != 0)
+                        {
+                            player.Coins += coinsEarned;
+                            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.EarnIncome, $"{player.Name} earned {coinsEarned} from {player.OwnedBuildings[buildingIndex]} {building.GetName()}(s)",
+                                        new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = coinsEarned, PlayerIndex = stateHelper.Player.GetPlayerIndex(player.UserName) }));;
+                        }
+                        break;
+                    }
+                case EstablishmentColor.Red:
+                    break;
+                case EstablishmentColor.Purple:
+                    break;
+                default:
+                    throw GameError.Create(m_state, ErrorTypes.InvalidState, "Tried to execute building income on a building with an unknown color.", false);                    
+            }
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+        }
+
+
+
         private void ThrowIfInvalidState(StateHelper stateHelper)
         {
             string err = stateHelper.Validate();
@@ -372,24 +558,6 @@ namespace GameCore
                 // todo this should end the game.
                 throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The game is now in an invalid state. Error: {err}", false);
             }
-        }
-
-        // Returns a random int.
-        public int RandomInt(int minInclusive, int maxInclusive)
-        {
-            int maxExclusive = maxInclusive + 1;
-            long diff = (long)maxExclusive - minInclusive;
-            long upperBound = uint.MaxValue / diff * diff;
-
-            uint randomUInt;
-            do
-            {
-                byte[] buffer = new byte[4];
-                m_random.GetBytes(buffer);
-                randomUInt = BitConverter.ToUInt32(buffer, 0);     
-            } while (randomUInt >= upperBound);
-
-            return (int)(minInclusive + (randomUInt % diff));
         }
 
         #endregion

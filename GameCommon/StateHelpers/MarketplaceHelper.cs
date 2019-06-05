@@ -101,7 +101,7 @@ namespace GameCommon.StateHelpers
         }
 
         // Returns the current count of built buildings by players in the current game.
-        public int GetCurrentBuiltBuildingsInGame(int buildingIndex)
+        public int GetBuiltBuildingsInCurrentGame(int buildingIndex)
         {
             BuildingBase b = GetBuildingRules(buildingIndex);
             GameState s = m_gameHelper.GetState();
@@ -120,9 +120,9 @@ namespace GameCommon.StateHelpers
         }
 
         // Returns how many buildings of the given type are still buildable by players in the game.
-        public int GetStillBuildableInGame(int buildingIndex)
+        public int GetBuildableInCurrentGame(int buildingIndex)
         {
-            return GetMaxBuildableBuildingsInGame(buildingIndex) - GetCurrentBuiltBuildingsInGame(buildingIndex);
+            return GetMaxBuildableBuildingsInGame(buildingIndex) - GetBuiltBuildingsInCurrentGame(buildingIndex);
         }
 
         // Returns how many buildings of the given type are buildable by players in the marketplace.
@@ -137,9 +137,9 @@ namespace GameCommon.StateHelpers
         }
 
         // Returns if a a building index is currently buildable from the marketplace.
-        public bool IsStillBuildableInGame(int buildingIndex)
+        public bool IsBuildableInCurrentGame(int buildingIndex)
         {
-            return GetStillBuildableInGame(buildingIndex) > 0;
+            return GetBuildableInCurrentGame(buildingIndex) > 0;
         }
 
         // Returns if a a building index is currently buildable from the marketplace.
@@ -150,24 +150,24 @@ namespace GameCommon.StateHelpers
 
         // Returns the number of unique building types (bakery, wheat field, etc) that are still available to be built
         // by players in the game.
-        public int GetCountOfBuildingTypesStillBuildableInGame()
+        public int GetCountOfBuildingTypesBuildableInCurrentGame()
         {
-            return GetBuildingTypesStillBuildableInGame().Count;
+            return GetBuildingTypesBuildableInCurrentGame().Count;
         }
 
         // Returns the number of building types are available to build in the marketplace.
         public int GetCountOfBuildingTypesStillBuildableInMarketplace()
         {
-            return GetBuildingTypesStillBuildableInMarketplace().Count;
+            return GetBuildingTypesBuildableInMarketplace().Count;
         }
 
         // Returns a list of building indexes that are still buildable in the game.
-        public List<int> GetBuildingTypesStillBuildableInGame()
+        public List<int> GetBuildingTypesBuildableInCurrentGame()
         {
             List<int> buildings = new List<int>();
             for (int b = 0; b < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
             {
-                if (GetStillBuildableInGame(b) > 0)
+                if (GetBuildableInCurrentGame(b) > 0)
                 {
                     buildings.Add(b);
                 }
@@ -176,7 +176,7 @@ namespace GameCommon.StateHelpers
         }
 
         // Returns a list of building indexes that are current buildable from the marketplace.
-        public List<int> GetBuildingTypesStillBuildableInMarketplace()
+        public List<int> GetBuildingTypesBuildableInMarketplace()
         {
             List<int> buildings = new List<int>();
             for (int b = 0; b < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); b++)

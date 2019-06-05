@@ -18,8 +18,14 @@ namespace GameCommon
         // How many rolls the current user has preformed.
         public int Rolls;
 
+        // Indicates if the player has committed to the dice result.
+        public bool HasCommitedDiceResult;
+
         // Indicates if the player has bought a building on this turn or not.
         public bool HasBougthBuilding;
+
+        // Indicates if the player has ended this turn.
+        public bool HasEndedTurn;
 
         // The results of the dice that have been rolled, assuming they have been rolled.
         public List<int> DiceResults = new List<int>();
@@ -35,6 +41,8 @@ namespace GameCommon
             Rolls = 0;
             DiceResults.Clear();
             HasBougthBuilding = false;
+            HasCommitedDiceResult = false;
+            HasEndedTurn = false;
         }
     }
 

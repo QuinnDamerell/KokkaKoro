@@ -80,13 +80,30 @@ namespace GameCommon.StateHelpers
                 index = GetPlayerIndex();
             }
 
-            if (ValidateUserIndex(index))
+            if (!ValidateUserIndex(index))
             {
                 return null;
             }
 
             GameState s = m_gameHelper.GetState();   
             return s.Players[index].UserName;
+        }
+
+        public string GetPlayerName(int? i = null)
+        {
+            int index = i.HasValue ? i.Value : -1;
+            if (!i.HasValue)
+            {
+                index = GetPlayerIndex();
+            }
+
+            if (!ValidateUserIndex(index))
+            {
+                return null;
+            }
+
+            GameState s = m_gameHelper.GetState();
+            return s.Players[index].Name;
         }
 
         public GamePlayer GetPlayer(string userName = null)
@@ -195,11 +212,15 @@ namespace GameCommon.StateHelpers
         // Returns if there are any building that are buildable from the marketplace and we can afford.
         public bool AreMarketplaceBuildableBuildingsAvailableThatCanAfford(string userName = null)
         {
-            return GetCanAffordAndBuildableInMarketplace(userName).Count > 0;
+            // Get all building that are in the marketplace.
+            List<int> buildable = m_gameHelper.Marketplace.GetBuildingTypesBuildableInMarketplace();
+
+            // See if there are any we can afford.
+            return FilterBuildingIndexsWeCanAfford(buildable, userName).Count > 0;
         }
 
         // Gets a list of building indexes that the player can afford and are buildable. available 
-        public List<int> GetCanAffordAndBuildableInMarketplace(string userName = null)
+        public List<int> FilterBuildingIndexsWeCanAfford(List<int> buildingIndexes, string userName = null)
         {
             List<int> canAffordAndBuildable = new List<int>();
             GamePlayer p = GetPlayer(userName);
@@ -208,10 +229,10 @@ namespace GameCommon.StateHelpers
                 return canAffordAndBuildable;
             }
 
-            List<int> buildable = m_gameHelper.Marketplace.GetBuildingTypesStillBuildableInMarketplace();
-            foreach(int b in buildable)
+            foreach(int b in buildingIndexes)
             {
-                if(CanAffordBuilding(b))
+                // Filter out only the ones we can afford and haven't bought too many of.
+                if(CanAffordBuilding(b, userName) && !HasReachedPerPlayerBuildingLimit(b, userName))
                 {
                     canAffordAndBuildable.Add(b);
                 }
@@ -243,6 +264,54 @@ namespace GameCommon.StateHelpers
                 }
             }
             return null;
+        }
+
+        public int GetIncomeOnMyTurn(int buildingIndex, string userName = null)
+        {
+            if(!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            {
+                return 0;
+            }
+            GamePlayer p = GetPlayer(userName);
+            if(p == null)
+            {
+                return 0;
+            }
+
+            // If they don't own it, they don't get anything.
+            if(p.OwnedBuildings[buildingIndex] == 0)
+            {
+                return 0;
+            }
+
+            // Get the number of coins we get per building.
+            int coinsPerEstablishment = m_gameHelper.BuildingRules[buildingIndex].GetCoinsOnMyTurn();
+            int coinsTotal = coinsPerEstablishment * p.OwnedBuildings[buildingIndex];
+            return coinsTotal;
+        }
+
+        public int GetIncomeOnAnyonesTurn(int buildingIndex, string userName = null)
+        {
+            if (!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            {
+                return 0;
+            }
+            GamePlayer p = GetPlayer(userName);
+            if (p == null)
+            {
+                return 0;
+            }
+
+            // If they don't own it, they don't get anything.
+            if (p.OwnedBuildings[buildingIndex] == 0)
+            {
+                return 0;
+            }
+
+            // Get the number of coins we get per building.
+            int coinsPerEstablishment = m_gameHelper.BuildingRules[buildingIndex].GetCoinsAnyonesTurn();
+            int coinsTotal = coinsPerEstablishment * p.OwnedBuildings[buildingIndex];
+            return coinsTotal;
         }
     }
 }

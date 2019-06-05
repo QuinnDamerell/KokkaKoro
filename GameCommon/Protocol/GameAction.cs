@@ -8,8 +8,6 @@ using System.Text;
 
 namespace GameCommon.Protocol
 {
-
-
     public class GameAction<T>
     {
         // The chosen action the player wants to preform.
@@ -32,9 +30,21 @@ namespace GameCommon.Protocol
         }
 
         // After you have been given dice results, this commits them for you turn.
-        public static GameAction<object> CreateCommitDiceResult()
+        public static GameAction<object> CreateCommitDiceResultAction()
         {
             return new GameAction<object>() { Action = GameActionType.CommitDiceResult, Options = null };
+        }
+
+        // Indicates you want to buy a building.
+        public static GameAction<object> CreateBuildBuildingAction(int buildingIndex, bool autoEndTurn = true)
+        {
+            return new GameAction<object>() { Action = GameActionType.BuildBuilding, Options = new BuildBuildingOptions() { AutoEndTurn = autoEndTurn, BuildingIndex = buildingIndex } };
+        }
+
+        // Indicates you want to end your turn.
+        public static GameAction<object> CreateEndTurnAction()
+        {
+            return new GameAction<object>() { Action = GameActionType.EndTurn, Options = null };
         }
     }
 }

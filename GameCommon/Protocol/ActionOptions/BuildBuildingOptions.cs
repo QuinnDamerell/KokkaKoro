@@ -7,7 +7,7 @@ using System.Text;
 
 namespace GameCommon.Protocol.ActionOptions
 {
-    public class BuildOptions
+    public class BuildBuildingOptions
     {
         // Indicates the building index to build built.
         public int BuildingIndex;

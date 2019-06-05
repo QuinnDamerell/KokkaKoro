@@ -28,7 +28,7 @@ namespace KokkaKoro
     class KokkaKoroClientWebsocket
     {
         public readonly int WriteTimeoutMs = 30000;
-        public readonly int ResponseTimeoutMs = 60000;
+        public readonly int ResponseTimeoutMs = 300000;
 
         IWebSocketHandler m_handler;
         ClientWebSocket m_websocket;

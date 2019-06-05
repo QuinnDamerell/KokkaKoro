@@ -15,8 +15,20 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "GameEnd")]
         GameEnd,
 
-        [EnumMember(Value = "DiceRollResult")]
-        DiceRollResult,
+        [EnumMember(Value = "RollDiceResult")]
+        RollDiceResult,
+
+        [EnumMember(Value = "CommitDiceResults")]
+        CommitDiceResults,
+
+        [EnumMember(Value = "BuildBuilding")]
+        BuildBuilding,
+
+        [EnumMember(Value = "EarnIncome")]
+        EarnIncome,
+
+        [EnumMember(Value = "EndTurn")]
+        EndTurn,
     }
 
     public class GameStateUpdate<T>

@@ -33,13 +33,13 @@ namespace GameCommon
             while(true)
             {
                 // First, check to see if we have all of the buildings in the game available in the marketplace.
-                if(stateHelper.Marketplace.GetCountOfBuildingTypesStillBuildableInMarketplace() == stateHelper.Marketplace.GetCountOfBuildingTypesStillBuildableInGame())
+                if(stateHelper.Marketplace.GetCountOfBuildingTypesStillBuildableInMarketplace() == stateHelper.Marketplace.GetCountOfBuildingTypesBuildableInCurrentGame())
                 {
                     // If this is the case, we want to make sure the quantity remaining for all buildings is in the marketplace.
                     for(int i = 0; i < stateHelper.BuildingRules.GetCountOfUniqueTypes(); i++)
                     {
                         // For each building, set the amount to the total that are buildable in the game.
-                        AvailableBuildable[i] = stateHelper.Marketplace.GetStillBuildableInGame(i);
+                        AvailableBuildable[i] = stateHelper.Marketplace.GetBuildableInCurrentGame(i);
                     }
                     
                     // Once we know all building are listed, we are done.
@@ -54,7 +54,7 @@ namespace GameCommon
                 }
 
                 // We need to add a building to the marketplace.
-                List<int> buildableBuildings = stateHelper.Marketplace.GetBuildingTypesStillBuildableInGame();
+                List<int> buildableBuildings = stateHelper.Marketplace.GetBuildingTypesBuildableInCurrentGame();
                 int randomIndex = randomGen.RandomInt(0, buildableBuildings.Count - 1);
 
                 // Add the building. This might add a new building to the marketplace or add another build count

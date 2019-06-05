@@ -45,13 +45,25 @@ namespace GameCommon.StateHelpers
         public bool CanRollOrReRoll()
         {
             GameState s = m_gameHelper.GetState();
-            return s.CurrentTurnState.Rolls < m_gameHelper.Player.GetMaxRollsAllowed();
+            return !HasEndedTurn() && !HasCommittedToDiceResult() && s.CurrentTurnState.Rolls < m_gameHelper.Player.GetMaxRollsAllowed();
         }
 
         public bool HasBuildABuiding()
         {
             GameState s = m_gameHelper.GetState();
             return s.CurrentTurnState.HasBougthBuilding;
+        }
+
+        public bool HasCommittedToDiceResult()
+        {
+            GameState s = m_gameHelper.GetState();
+            return s.CurrentTurnState.HasCommitedDiceResult;
+        }
+
+        public bool HasEndedTurn()
+        {
+            GameState s = m_gameHelper.GetState();
+            return s.CurrentTurnState.HasEndedTurn;
         }
 
         public string GetActiveTurnPlayerUserName()
@@ -64,29 +76,51 @@ namespace GameCommon.StateHelpers
         {
             List<GameActionType> actions = new List<GameActionType>();
             GameState s = m_gameHelper.GetState();
-            if(s.CurrentTurnState.Rolls == 0)
+
+            // First of all, we have to get a dice roll.
+            if(!HasCommittedToDiceResult())
             {
-                // If there have been no rolls, the only action is to make a roll.
-                actions.Add(GameActionType.RollDice);
+                // If they haven't rolled yet, that's the only option.
+                if (s.CurrentTurnState.Rolls == 0)
+                {
+                    actions.Add(GameActionType.RollDice);
+                }
+                else
+                {
+                    // They have rolled at least once, but they might be able to roll again.
+                    if (CanRollOrReRoll())
+                    {
+                        actions.Add(GameActionType.RollDice);
+                    }
+
+                    // And they always have the option to commit.
+                    actions.Add(GameActionType.CommitDiceResult);
+                }
+
+                // There is nothing else the player can do until they commit the roll.
                 return actions;
             }
 
-            if(CanRollOrReRoll())
-            {
-                // If the user can roll more than once, list it as an option.
-                actions.Add(GameActionType.RollDice);
-            }
+            //
+            // The dice roll has been committed.
+            //
 
-            // Check if the player has build a building.
+            // If they haven't build yet...
             if(!HasBuildABuiding())
             {
-                // Check if there are building they can afford in the marketplace currently.
+                // ... check if there are building they can afford in the marketplace currently.
                 if(m_gameHelper.Player.AreMarketplaceBuildableBuildingsAvailableThatCanAfford())
                 {
-                    actions.Add(GameActionType.BuyBuilding);
+                    // If so give them the option.
+                    actions.Add(GameActionType.BuildBuilding);
                 }
             }
 
+            // If they haven't ended their turn, give them the option.
+            if(!HasEndedTurn())
+            {
+                //actions.Add(GameActionType.BuildBuilding);
+            }
             return actions;
         }
 

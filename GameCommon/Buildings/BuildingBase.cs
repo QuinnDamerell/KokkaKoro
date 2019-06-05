@@ -18,6 +18,15 @@ namespace GameCommon.Buildings
         Wheat,
         Bread,
     }
+
+    public class ProductionBenefit
+    {
+        // The type of production that benefits.
+        public EstablishmentProduction Prodution;
+
+        // The value you get per production.
+        public int Value;
+    }
     
     public abstract class BuildingBase
     {
@@ -58,10 +67,13 @@ namespace GameCommon.Buildings
         public abstract bool IsStartingBuilding();
 
         // Given a dice roll, this returns how many coins the player gets on their turn.
-        public abstract int GetCoinsOnMyTurn(int diceValue);
+        public abstract int GetCoinsOnMyTurn();
 
         // Given a dice roll, this returns how many coins the player gets on anyone's turn.
-        public abstract int GetCoinsAnyonesTurn(int diceValue);
+        public abstract int GetCoinsAnyonesTurn();
+
+        // Returns a list of production types this gets amplified by.
+        public abstract List<ProductionBenefit> GetProductionBenfits();
 
         // Helper function, returns if the dice roll is in activation range of this
         // card or not.

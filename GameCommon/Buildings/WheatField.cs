@@ -64,15 +64,21 @@ namespace GameCommon.Buildings
         }
 
         // See comments in base class. (BuildingBase.cs)
-        public override int GetCoinsOnMyTurn(int diceValue)
+        public override int GetCoinsOnMyTurn()
         {
             return 0;
         }
 
         // See comments in base class. (BuildingBase.cs)
-        public override int GetCoinsAnyonesTurn(int diceValue)
+        public override int GetCoinsAnyonesTurn()
         {
             return 1;
+        }
+
+        // See comments in base class. (BuildingBase.cs)
+        public override List<ProductionBenefit> GetProductionBenfits()
+        {
+            return null;
         }
     }
 }

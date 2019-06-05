@@ -16,8 +16,12 @@ namespace GameCommon.Protocol
         CommitDiceResult,
 
         // Tells the server the client wishes to build a building.
-        [EnumMember(Value = "BuyBuilding")]
-        BuyBuilding,
+        [EnumMember(Value = "BuildBuilding")]
+        BuildBuilding,
+
+        // Tells the server the client wishes to end the turn.
+        [EnumMember(Value = "EndTurn")]
+        EndTurn,
     }
 
     public class GameActionRequest
