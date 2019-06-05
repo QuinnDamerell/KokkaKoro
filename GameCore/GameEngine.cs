@@ -81,15 +81,15 @@ namespace GameCore
             // Build a state helper.
             StateHelper stateHelper = m_state.GetStateHelper(userName);
 
-            // Check the state.
-            ThrowIfInvalidState(stateHelper);
-
-            // Check if this is the first action on the game.
+            // Check if the game has not been started yet. This setup needs to happen first, because the validation will fail.
             if (!m_gameStarted)
             {
                 StartGame(actionLog, stateHelper);
                 return;
-            }
+            }       
+
+            // Check the state.
+            ThrowIfInvalidState(stateHelper);       
 
             // Add the action to the game log. (even if this fails we want to record it)
             actionLog.Add(GameLog.CreateAction(m_state, action));
@@ -118,8 +118,8 @@ namespace GameCore
 
             // Check if the turn is over.
 
-            // Once the actions have been made, generate the new set of options for the player
-            //BuildPlayerActionRequest()
+            // Once the actions have been made, generate the new set of options for the player.
+            BuildPlayerActionRequest(actionLog, stateHelper);
 
 
 
@@ -151,6 +151,10 @@ namespace GameCore
             m_state.CurrentTurnState = new TurnState();
             m_state.CurrentTurnState.PlayerIndex = 0;
             m_state.CurrentTurnState.Clear(0);
+
+            // Init the marketplace
+            m_state.Market = new Marketplace();
+
             
             // Give each player their starting building
 
