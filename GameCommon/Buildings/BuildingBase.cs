@@ -35,7 +35,7 @@ namespace GameCommon.Buildings
         public abstract int GetBuildCost();
 
         // Gets the max number of this type that are allowed in the game.
-        // THIS VALUE NEEDS TO INCLUDE STARTING BUILDINGS.
+        // THIS VALUE EXCULDES STARTING BUILDINGS. USE StateHelper.Marketplace.GetMaxAllowableBuiltBuildingsInGame() for an accurate value.
         public abstract int GetMaxBuildingCountInGame();
 
         // Gets the max number of buildings of this type a player can have.

@@ -8,11 +8,11 @@ namespace GameCommon
     // This class is used to list and get references to the building types. Since we don't send the building 
     // details in each game state, this is where you can find each building given it's index and query it for
     // the name and rules of the building.
-    public class BuildingList
+    public class BuildingRules
     {
         List<BuildingBase> m_bulidings = new List<BuildingBase>();
 
-        public BuildingList(GameMode mode)
+        public BuildingRules(GameMode mode)
         {
             // For all modes, include the base buildings.
             m_bulidings.Clear();
@@ -30,7 +30,7 @@ namespace GameCommon
             get { return Get(i); }
         }
 
-        public int GetCount()
+        public int GetCountOfUniqueTypes()
         {
             return m_bulidings.Count;
         }

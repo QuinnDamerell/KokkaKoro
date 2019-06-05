@@ -15,7 +15,7 @@ namespace GameCommon.StateHelpers
         public PlayerHelper Player;
         public CurrentTurnHelper CurrentTurn;
         public MarketplaceHelper Marketplace;
-        public BuildingList Buildings;
+        public BuildingList BuildingRules;
 
         // 
         // Internal vars
@@ -30,7 +30,7 @@ namespace GameCommon.StateHelpers
             Marketplace = new MarketplaceHelper(this);
             if (state != null)
             {
-                Buildings = new BuildingList(state.Mode);
+                BuildingRules = new BuildingRules(state.Mode);
             }
 
             m_state = state;
