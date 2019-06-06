@@ -78,6 +78,82 @@ namespace GameCore
             }            
         }
 
+        public (GameActionResponse, List<GameLog>) EndGame(GameEndReason reason)
+        {
+            // Create a action log.
+            List<GameLog> actionLog = new List<GameLog>();
+
+            // End the game.
+            try
+            {
+                EndGameInternal(actionLog, reason);
+            }
+            catch (GameError e)
+            {
+                // Add the error to the log.
+                actionLog.Add(GameLog.CreateError(e));
+            }
+            catch (Exception e)
+            {
+                // Create an error and add it to the log.
+                GameError err = GameError.Create(m_state, ErrorTypes.Unknown, $"An exception was thrown while ending the game. {e.Message}", false);
+                actionLog.Add(GameLog.CreateError(err));
+            }
+
+            // Make sure we add all of the events to the game log.
+            m_logKeeper.AddToLog(actionLog);
+
+            // Send back the results.
+            return (GameActionResponse.CreateSuccess(), actionLog);
+        }
+
+        private GameActionResponse EndGameInternal(List<GameLog> actionLog, GameEndReason reason, StateHelper stateHelper = null)
+        {
+            // Note we don't take the action lock here, so if some game is stuck processing it will still get killed.
+            if(m_state.CurrentTurnState.HasGameEnded)
+            {
+                throw GameError.Create(m_state, ErrorTypes.GameEnded, $"The game has already been ended.", false);
+            }
+            
+            // End the game by setting the game ended flag.
+            m_state.CurrentTurnState.HasGameEnded = true;
+
+            // Now try to find if there was a winner.
+            // We try catch this to make sure we always send the end message.
+            GamePlayer winner = null;
+            int? playerIndex = null;
+            try
+            {
+                // If we didn't get a state helper just make one. 
+                // Check for a winner shouldn't need the current player to work correctly.
+                if (stateHelper == null)
+                {
+                    stateHelper = m_state.GetStateHelper("");
+                }
+
+                // Create an empty state helper to check for a winner.
+                (playerIndex, winner) = stateHelper.Player.CheckForWinner();
+            }
+            catch (GameError e)
+            {
+                // Add the error to the log.
+                actionLog.Add(GameLog.CreateError(e));
+            }
+            catch (Exception e)
+            {
+                // Create an error and add it to the log.
+                GameError err = GameError.Create(m_state, ErrorTypes.Unknown, $"An exception was thrown while ending the game. {e.Message}", false);
+                actionLog.Add(GameLog.CreateError(err));
+            }
+
+            // Create the end game message
+            actionLog.Add(GameLog.CreateGameStateUpdate<GameEndDetails>(m_state, StateUpdateType.GameEnd, $"The Game is over because {reason.ToString()}! {(winner == null ? "There was no winner!" : $"{winner.Name} won!")}",
+                new GameEndDetails() { PlayerIndex = playerIndex, Reason = reason }));
+
+            // Return success.
+            return GameActionResponse.CreateSuccess();            
+        }
+
         private void ConsumeActionInternal(GameAction<object> action, string userName, List<GameLog> actionLog)
         {
             // A few notes. 
@@ -199,17 +275,23 @@ namespace GameCore
             int playerIndex = stateHelper.Player.GetPlayerIndex();
             if(playerIndex == -1)
             {
-                throw GameError.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{stateHelper.GetPerspectiveUserName()}` user name wasn't found in this game.", false);
+                throw GameError.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{stateHelper.Player.GetPlayerUserName()}` user name wasn't found in this game.", false);
             }
             if(!stateHelper.CurrentTurn.IsMyTurn())
             {
-                throw GameError.Create(m_state, ErrorTypes.NotPlayersTurn, $"`{stateHelper.GetPerspectiveUserName()}` tried to send a action when it's not their turn.", false);
+                throw GameError.Create(m_state, ErrorTypes.NotPlayersTurn, $"`{stateHelper.Player.GetPlayerUserName()}` tried to send a action when it's not their turn.", false);
             }
 
             // Next, make sure we have an action.
             if (action == null)
             {
                 throw GameError.Create(m_state, ErrorTypes.Unknown, $"No action object was sent", false);
+            }
+
+            // Last, make sure the game hasn't ended.
+            if(stateHelper.CurrentTurn.HasGameEnded())
+            {
+                throw GameError.Create(m_state, ErrorTypes.GameEnded, $"`{stateHelper.Player.GetPlayerUserName()}` can't take an action because the game has ended.", false);
             }
         }
 
@@ -397,7 +479,7 @@ namespace GameCore
             m_state.CurrentTurnState.HasBougthBuilding = true;
             
             // Create an update
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.BuildBuilding, $"Player {stateHelper.Player.GetPlayerName()} build a {stateHelper.BuildingRules[options.BuildingIndex].GetName()}.",
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.BuildBuilding, $"Player {stateHelper.Player.GetPlayerName()} built a {stateHelper.BuildingRules[options.BuildingIndex].GetName()}.",
                 new BuildBuildingDetails() { PlayerIndex = stateHelper.Player.GetPlayerIndex(), BuildingIndex = options.BuildingIndex }));
 
             // Validate things are good.

@@ -17,7 +17,11 @@ namespace GameCommon
             // For all modes, include the base buildings.
             m_bulidings.Clear();
             m_bulidings.Add(new WheatField());
+            m_bulidings.Add(new Ranch());
             m_bulidings.Add(new Bakery());
+            m_bulidings.Add(new Forest());
+            m_bulidings.Add(new Mine());
+            m_bulidings.Add(new AppleOrchard());
         }
 
         public BuildingBase Get(int buildingIndex)

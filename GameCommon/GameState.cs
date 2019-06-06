@@ -30,6 +30,9 @@ namespace GameCommon
         // The results of the dice that have been rolled, assuming they have been rolled.
         public List<int> DiceResults = new List<int>();
 
+        // Indicates if the game has ended.
+        public bool HasGameEnded = false;
+
         public TurnState()
         {
             Clear(0);

@@ -72,6 +72,12 @@ namespace GameCommon.StateHelpers
             return m_gameHelper.Player.GetPlayerUserName(s.CurrentTurnState.PlayerIndex);
         }
 
+        public bool HasGameEnded()
+        {
+            GameState s = m_gameHelper.GetState();
+            return s.CurrentTurnState.HasGameEnded;
+        }
+
         public List<GameActionType> GetPossibleActions()
         {
             List<GameActionType> actions = new List<GameActionType>();

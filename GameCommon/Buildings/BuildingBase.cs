@@ -16,7 +16,9 @@ namespace GameCommon.Buildings
     {
         None,
         Wheat,
+        Cattle,
         Bread,
+        Gear
     }
 
     public class ProductionBenefit

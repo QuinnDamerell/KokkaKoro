@@ -4,33 +4,33 @@ using System.Text;
 
 namespace GameCommon.Buildings
 {
-    class WheatField : BuildingBase
+    class Mine : BuildingBase
     {
-        internal WheatField()
+        internal Mine()
         { }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetName()
         {
-            return "Wheat Field";
+            return "Mine";
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetRule()
         {
-            return "Get 1 coin from the bank. (anyone's turn)";
+            return "Get 5 coin from the bank. (anyone's turn)";
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override (int, int) GetActivationRange()
         {
-            return (1, 1);
+            return (9, 9);
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override int GetBuildCost()
         {
-            return 1;
+            return 6;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -48,7 +48,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override EstablishmentProduction GetEstablishmentProduction()
         {
-            return EstablishmentProduction.Wheat;
+            return EstablishmentProduction.Gear;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -60,7 +60,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override bool IsStartingBuilding()
         {
-            return true;
+            return false;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -72,7 +72,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override int GetCoinsAnyonesTurn()
         {
-            return 1;
+            return 5;
         }
 
         // See comments in base class. (BuildingBase.cs)

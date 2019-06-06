@@ -21,7 +21,7 @@ namespace GameService.ServiceCore
     public class ServiceGame
     {
         static TimeSpan c_maxGameLength = new TimeSpan(0, 10, 0);
-        static TimeSpan c_maxTurnTime   = new TimeSpan(1, 0, 0);
+        static TimeSpan c_maxTurnTime   = c_maxGameLength;
         static TimeSpan c_minTurnTime   = new TimeSpan(0, 0, 0);
 
         Guid m_id;
@@ -407,8 +407,19 @@ namespace GameService.ServiceCore
             // Set the game complete
             lock (m_gameLock)
             {
+                if(m_state == KokkaKoroGameState.Complete)
+                {
+                    return;
+                }
                 m_state = KokkaKoroGameState.Complete;
             }
+
+            // Make sure the game has ended, if it hasn't yet, it would be due to a timeout.
+            // Ignore the response.
+            (GameActionResponse response, List<GameLog> actionLog) = m_gameEngine.EndGame(GameCommon.Protocol.GameUpdateDetails.GameEndReason.GameTimeout);
+
+            // Broadcast the game log updates.
+            BroadcastMessages(actionLog);
 
             // Get a local list of the players
             List<ServicePlayer> localPlayers = new List<ServicePlayer>();

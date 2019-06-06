@@ -51,6 +51,11 @@ namespace GameCommon.Protocol
         // The requested action is invalid given the current game state.
         [EnumMember(Value = "InvalidStateToTakeAction")]
         InvalidStateToTakeAction,
+
+        // The game has already ended.
+        [EnumMember(Value = "GameEnded")]
+        GameEnded,
+
     }
 
     public class GameError : Exception

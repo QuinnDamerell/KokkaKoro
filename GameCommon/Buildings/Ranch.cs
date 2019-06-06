@@ -4,15 +4,15 @@ using System.Text;
 
 namespace GameCommon.Buildings
 {
-    class WheatField : BuildingBase
+    class Ranch : BuildingBase
     {
-        internal WheatField()
+        internal Ranch()
         { }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetName()
         {
-            return "Wheat Field";
+            return "Ranch";
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -24,7 +24,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override (int, int) GetActivationRange()
         {
-            return (1, 1);
+            return (2, 2);
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -48,7 +48,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override EstablishmentProduction GetEstablishmentProduction()
         {
-            return EstablishmentProduction.Wheat;
+            return EstablishmentProduction.Cattle;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -60,7 +60,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override bool IsStartingBuilding()
         {
-            return true;
+            return false;
         }
 
         // See comments in base class. (BuildingBase.cs)

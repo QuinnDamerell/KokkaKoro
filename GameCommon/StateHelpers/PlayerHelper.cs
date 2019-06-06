@@ -266,6 +266,13 @@ namespace GameCommon.StateHelpers
             return null;
         }
 
+        // Returns null if no winner was found, otherwise the winning player.
+        public (int?, GamePlayer) CheckForWinner()
+        {
+            // todo
+            return (null, null);
+        }
+
         public int GetIncomeOnMyTurn(int buildingIndex, string userName = null)
         {
             if(!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
