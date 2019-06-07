@@ -91,6 +91,7 @@ namespace GameService.WebsocketsHelpers
                 catch(Exception e)
                 {
                     Logger.Error("Exception in websocket close.", e);
+                    Logger.Error($"Stack: \n{e.StackTrace}");
                     CloseWebSocket(true);
                 }             
             }

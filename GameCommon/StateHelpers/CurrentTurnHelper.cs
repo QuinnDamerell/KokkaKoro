@@ -125,7 +125,7 @@ namespace GameCommon.StateHelpers
             // If they haven't ended their turn, give them the option.
             if(!HasEndedTurn())
             {
-                //actions.Add(GameActionType.BuildBuilding);
+                actions.Add(GameActionType.EndTurn);
             }
             return actions;
         }

@@ -23,7 +23,7 @@ namespace KokkaKoro
         Task OnDisconnect(bool isFromClient);
     }
 
-    public class Service : IWebSocketHandler
+    public class Service : IWebSocketHandler, ILogger
     {
         // A callback that fires whenever there are any game the user is joined or spectating.
         // This is how you get game update notifications and notifications when it's your turn.
@@ -33,20 +33,27 @@ namespace KokkaKoro
         public event DisconnectCallback OnDisconnected;
 
         KokkaKoroClientWebsocket m_websocket;
+        ILogger m_logger;
+        bool m_debugWebsocketMessages = false;
 
         // Turns on SDK debugging.
-        public void SetDebugging(bool state)
+        public void SetDebugging(ILogger logger, bool showWebsocketMessages = false)
         {
-            Logger.SetDebug(state);
+            m_logger = logger;
+            m_debugWebsocketMessages = showWebsocketMessages;
+            if(m_websocket != null)
+            {
+                m_websocket.SetLogMessages(showWebsocketMessages);
+            }
         }
 
         // Connects to the service. 
         // If local port is given, we will try to connect to the localhost port.
         public async Task ConnectAsync(int? localPort = null)
         {
-            m_websocket = new KokkaKoroClientWebsocket(this);
+            m_websocket = new KokkaKoroClientWebsocket(this, this, m_debugWebsocketMessages);
             string url = localPort.HasValue ? $"ws://localhost:{localPort.Value}/ws" : $"wss://kokkakoro.azurewebsites.net/ws";
-            Logger.Info($"Connecting to {url}");
+            Info($"Connecting to {url}");
             await m_websocket.Connect(url);
         }
 
@@ -66,13 +73,13 @@ namespace KokkaKoro
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to parse GameUpdate message.", e);
+                Error($"Failed to parse GameUpdate message.", e);
                 return;
             }
 
             if (broadcastMsg == null || broadcastMsg.Data == null)
             {
-                Logger.Error($"No data in broadcast message");
+                Error($"No data in broadcast message");
                 return;
             }
 
@@ -83,7 +90,7 @@ namespace KokkaKoro
             }
             catch(Exception e)
             {
-                Logger.Error($"OnGameUpdates function had an unhanded exception.", e);
+                Error($"OnGameUpdates function had an unhanded exception.", e);
             }
         }
 
@@ -96,7 +103,7 @@ namespace KokkaKoro
             }
             catch (Exception e)
             {
-                Logger.Error($"OnDisconnected function had an unhanded exception.", e);
+                Error($"OnDisconnected function had an unhanded exception.", e);
             }
         }
 
@@ -106,7 +113,7 @@ namespace KokkaKoro
             string response = await m_websocket.SendRequest(request);
             if (String.IsNullOrWhiteSpace(response))
             {
-                Logger.Error($"${requestName} request failed.");
+                Error($"${requestName} request failed.");
                 throw new KokkaKoroException("Server returned an empty mes.", false);
             }
 
@@ -114,14 +121,14 @@ namespace KokkaKoro
             KokkaKoroResponse<T> obj = JsonConvert.DeserializeObject<KokkaKoroResponse<T>>(response);
             if (!String.IsNullOrWhiteSpace(obj.Error))
             {
-                Logger.Error($"Service failed to ${requestName}: {obj.Error}");
+                Error($"Service failed to ${requestName}: {obj.Error}");
                 throw new KokkaKoroException(obj.Error, true);
             }
 
             // Validate we got a data object.
             if (expectData && obj.Data == null)
             {
-                Logger.Error($"${requestName} failed to get data object in response.");
+                Error($"${requestName} failed to get data object in response.");
                 throw new KokkaKoroException("Failed to find data object in response.", true);
             }
             return obj;
@@ -335,5 +342,41 @@ namespace KokkaKoro
         }
 
         #endregion
+
+        public void Info(string msg)
+        {
+            ILogger l = m_logger;
+            if(l != null)
+            {
+                l.Info(msg);
+            }
+        }
+
+        public void Warn(string msg)
+        {
+            ILogger l = m_logger;
+            if (l != null)
+            {
+                l.Warn(msg);
+            }
+        }
+
+        public void Error(string msg, Exception e = null)
+        {
+            ILogger l = m_logger;
+            if (l != null)
+            {
+                l.Error(msg, e);
+            }
+        }
+
+        public void Fatial(string msg, Exception e = null)
+        {
+            ILogger l = m_logger;
+            if (l != null)
+            {
+                l.Fatial(msg, e);
+            }
+        }
     }
 }

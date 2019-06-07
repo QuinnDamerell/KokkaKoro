@@ -326,8 +326,9 @@ namespace GameCore
             // Based on the current state, build a list of possible actions.
             List<GameActionType> actions = stateHelper.CurrentTurn.GetPossibleActions();
 
-            if(actions.Count == 0)
+            if (actions.Count == 0)
             {
+                actions = stateHelper.CurrentTurn.GetPossibleActions();
                 throw GameError.Create(m_state, ErrorTypes.InvalidState, $"There are no possible actions for the current player.", false);
             }
 

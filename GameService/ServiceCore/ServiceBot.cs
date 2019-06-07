@@ -143,8 +143,8 @@ namespace GameService.ServiceCore
                 Arguments = GetExePath(),
                 CreateNoWindow = true,
                 ErrorDialog = false,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
+                RedirectStandardError = false,
+                RedirectStandardOutput = false,
                 UseShellExecute = false,
                 WorkingDirectory = m_localPath
             };

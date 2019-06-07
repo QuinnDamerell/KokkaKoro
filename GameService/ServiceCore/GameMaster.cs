@@ -92,6 +92,8 @@ namespace GameService.ServiceCore
                     return StartGame(jsonStr);
                 case KokkaKoroCommands.SendGameAction:
                     return SendGameAction(jsonStr, userName);
+                case KokkaKoroCommands.Heartbeat:
+                    return KokkaKoroResponse<object>.CreateResult(null);
             }
             return KokkaKoroResponse<object>.CreateError("Command not implemented.");
         }
@@ -435,8 +437,6 @@ namespace GameService.ServiceCore
                 Logger.Error("Failed to parse game action", e);
                 return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
             }
-
-            var type = request.CommandOptions.Action.Options.GetType();
 
             // Validate
             if (request.CommandOptions == null)

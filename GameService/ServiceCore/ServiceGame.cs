@@ -20,7 +20,7 @@ namespace GameService.ServiceCore
 {
     public class ServiceGame
     {
-        static TimeSpan c_maxGameLength = new TimeSpan(0, 10, 0);
+        static TimeSpan c_maxGameLength = new TimeSpan(0, 1, 0);
         static TimeSpan c_maxTurnTime   = c_maxGameLength;
         static TimeSpan c_minTurnTime   = new TimeSpan(0, 0, 0);
 

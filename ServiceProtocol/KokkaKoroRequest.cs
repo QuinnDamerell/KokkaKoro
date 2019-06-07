@@ -13,40 +13,45 @@ namespace ServiceProtocol
         [EnumMember(Value = "Login")]
         Login = 0,
 
+        // Clients must heartbeat to keep the websocket alive.
+        [EnumMember(Value = "Heartbeat")]
+        Heartbeat = 1,
+
         // Returns a list of all games currently known of.
         [EnumMember(Value = "ListGames")]
-        ListGames = 1,
+        ListGames = 2,
 
         // Returns a list of all bots we know of.
         [EnumMember(Value = "ListBots")]
-        ListBots = 2,
+        ListBots = 3,
 
         // Creates a new game with the CreateGameOptions class.
         [EnumMember(Value = "CreateGame")]
-        CreateGame = 3,
+        CreateGame = 4,
 
         // Adds a hosted bot to a game.
         [EnumMember(Value = "AddHostedBot")]
-        AddHostedBot = 4,
+        AddHostedBot = 5,
 
         // Joins the current client as a player.
         [EnumMember(Value = "JoinGame")]
-        JoinGame = 5,
+        JoinGame = 6,
 
         // Starts the given game.
         [EnumMember(Value = "StartGame")]
-        StartGame = 6,
+        StartGame = 7,
 
         // Sends an action to a game.
         [EnumMember(Value = "SendGameAction")]
-        SendGameAction = 7,
-
-        [EnumMember(Value = "SpecateGame")]
-        SpecateGame = 8
+        SendGameAction = 8,
     }
 
     public class KokkaKoroRequest<T>
     {
+        // If the server doesn't hear from the client in this amount of time the socket will be closed.
+        [JsonIgnore]
+        public static int HeartbeatTimeoutMs = 4000;
+
         // Indicates which command we are sending.
         [JsonConverter(typeof(StringEnumConverter))]
         public KokkaKoroCommands Command;
