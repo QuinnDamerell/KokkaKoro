@@ -20,9 +20,10 @@ namespace GameService.ServiceCore
 {
     public class ServiceGame
     {
-        static TimeSpan c_maxGameLength = new TimeSpan(0, 1, 0);
+        static TimeSpan c_maxGameLength = new TimeSpan(0, 0, 20);
         static TimeSpan c_maxTurnTime   = c_maxGameLength;
         static TimeSpan c_minTurnTime   = new TimeSpan(0, 0, 0);
+        static int c_maxRoundCount      = 5000; 
 
         Guid m_id;
         KokkaKoroGameState m_state;
@@ -31,6 +32,7 @@ namespace GameService.ServiceCore
         string m_password;
         string m_gameName;
         string m_createdBy;
+        int m_roundLimit;
         TimeSpan m_minTurnTimeLimit;
         TimeSpan m_turnTimeLimit;
         TimeSpan m_gameTimeLmit;
@@ -43,11 +45,12 @@ namespace GameService.ServiceCore
         // Game stuff
         GameEngine m_gameEngine;
 
-        public ServiceGame(int? playerLimit = null, string gameName = null, string createdBy = null, string password = null, TimeSpan? turnTimeLimit = null, TimeSpan? minTurnLimit = null, TimeSpan? gameTimeLimit = null)
+        public ServiceGame(int? playerLimit = null, string gameName = null, string createdBy = null, string password = null, TimeSpan? turnTimeLimit = null, TimeSpan? minTurnLimit = null, TimeSpan? gameTimeLimit = null, int? roundLimit = null)
         {
             m_state = KokkaKoroGameState.Lobby;
             m_id = Guid.NewGuid();
             m_createdAt = DateTime.UtcNow;
+            m_roundLimit = roundLimit.HasValue ? roundLimit.Value : int.MaxValue;
             m_gameTimeLmit = gameTimeLimit.HasValue ? gameTimeLimit.Value : TimeSpan.MaxValue;
             m_turnTimeLimit = turnTimeLimit.HasValue ? turnTimeLimit.Value : TimeSpan.MaxValue;
             m_minTurnTimeLimit = minTurnLimit.HasValue ? minTurnLimit.Value : TimeSpan.MinValue;
@@ -68,6 +71,10 @@ namespace GameService.ServiceCore
             if(m_minTurnTimeLimit < c_minTurnTime)
             {
                 m_minTurnTimeLimit = c_minTurnTime;
+            }
+            if(m_roundLimit > c_maxRoundCount)
+            {
+                m_roundLimit = c_maxRoundCount;
             }
         }
 
@@ -298,6 +305,44 @@ namespace GameService.ServiceCore
             return null;
         }
 
+        public GetGameLogsResponse GetGameLogs()
+        {
+            GetGameLogsResponse response = new GetGameLogsResponse();
+            response.BotLogs = new List<KokkaKoroBotLog>();
+            response.Game = GetInfo();
+            if(m_gameEngine != null)
+            {
+                response.GameLog = m_gameEngine.GetLogs();
+                response.State = m_gameEngine.GetState();
+            }
+
+            // Get a copy of the current players.
+            List<ServicePlayer> players = new List<ServicePlayer>();
+            lock (m_gameLock)
+            {
+                foreach (ServicePlayer p in m_players)
+                {
+                    players.Add(p);
+                }
+            }
+
+            // Outside of lock, get the logs.
+            foreach(ServicePlayer p in players)
+            {
+                if (p.IsBot())
+                {
+                    KokkaKoroBotLog log = new KokkaKoroBotLog();
+                    log.Player = p.GetInfo();
+                    log.Bot = p.GetBotInfo();
+                    log.StdOut = p.GetBotStdOut();
+                    log.StdErr = p.GetBotStdErr();
+                    response.BotLogs.Add(log);
+                }
+            }
+
+            return response;
+        }
+
         public SendGameActionResponse SendGameAction(GameAction<object> action, string userName)
         {
             lock (m_gameLock)
@@ -348,7 +393,7 @@ namespace GameService.ServiceCore
             {
                 players.Add(new InitalPlayer() { FriendlyName = p.GetInGameName(), UserName = p.GetUserName() });
             }
-            m_gameEngine = new GameEngine(players, GameMode.Base);
+            m_gameEngine = new GameEngine(players, GameMode.Base, m_roundLimit);
 
             // Invoke the first null action to get the ball rolling.
             // Ignore the response.

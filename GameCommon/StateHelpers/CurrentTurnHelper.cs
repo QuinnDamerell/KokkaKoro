@@ -33,6 +33,10 @@ namespace GameCommon.StateHelpers
             {
                 return "There are more dice results than then player can currently roll dice.";
             }
+            if(s.CurrentTurnState.RoundNumber < 0)
+            {
+                return "The round number was smaller than 0";
+            }
             return null;
         }
 
@@ -76,6 +80,12 @@ namespace GameCommon.StateHelpers
         {
             GameState s = m_gameHelper.GetState();
             return s.CurrentTurnState.HasGameEnded;
+        }
+
+        public bool HasGameStarted()
+        {
+            GameState s = m_gameHelper.GetState();
+            return s.CurrentTurnState.HasGameStarted;
         }
 
         public List<GameActionType> GetPossibleActions()

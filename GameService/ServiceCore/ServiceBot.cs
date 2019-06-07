@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,8 +42,8 @@ namespace GameService.ServiceCore
 
         // Output
         string m_fatalError = null;
-        string m_stdOut = null;
-        string m_stdErr = null;
+        StringBuilder m_stdOutput = new StringBuilder();
+        StringBuilder m_stdError = new StringBuilder();
 
         public ServiceBot(KokkaKoroBot info, string localPath, bool wasInCache)
         {
@@ -109,17 +110,7 @@ namespace GameService.ServiceCore
             }
             catch { }
 
-            // Try to grab the outputs
-            try
-            {
-                m_stdOut = process.StandardOutput.ReadToEnd();
-            }
-            catch { }
-            try
-            {
-                m_stdErr = process.StandardError.ReadToEnd();
-            }
-            catch { }
+            Console.WriteLine(m_stdOutput.ToString());
 
             // Update the state
             lock (m_stateLock)
@@ -143,8 +134,8 @@ namespace GameService.ServiceCore
                 Arguments = GetExePath(),
                 CreateNoWindow = true,
                 ErrorDialog = false,
-                RedirectStandardError = false,
-                RedirectStandardOutput = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
                 UseShellExecute = false,
                 WorkingDirectory = m_localPath
             };
@@ -161,10 +152,20 @@ namespace GameService.ServiceCore
 
             // Create and start the process.
             process.StartInfo = info;
+
+            // Attach to get the std out and error.
+            process.OutputDataReceived += Process_OutputDataReceived;
+            process.ErrorDataReceived += Process_ErrorDataReceived;
+
+            // Start
             process.Start();
 
+            // And start the reading.
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
             // Wait for the process to die.
-            while(m_state == ServiceBotState.Starting || m_state == ServiceBotState.Joined)
+            while (m_state == ServiceBotState.Starting || m_state == ServiceBotState.Joined)
             {
                 // Wake up every 500ms to check state.
                 process.WaitForExit(500);
@@ -173,6 +174,20 @@ namespace GameService.ServiceCore
                     break;
                 }
             }
+        }
+
+        private void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            // Add to the string builder.
+            m_stdError.Append("\r\n");
+            m_stdError.Append(e.Data);
+        }
+
+        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            // Add to the string builder.
+            m_stdOutput.Append("\r\n");
+            m_stdOutput.Append(e.Data);
         }
 
         private void SetFatalError(string msg)
@@ -239,6 +254,16 @@ namespace GameService.ServiceCore
         public bool WasInCache()
         {
             return m_wasLoadedFromCache;
+        }
+
+        public string GetStdOut()
+        {
+            return m_stdOutput.ToString();
+        }
+
+        public string GetStdErr()
+        {
+            return m_stdError.ToString();
         }
     }
 }

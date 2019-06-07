@@ -18,6 +18,9 @@ namespace GameCommon
         // How many rolls the current user has preformed.
         public int Rolls;
 
+        // The results of the dice that have been rolled, assuming they have been rolled.
+        public List<int> DiceResults = new List<int>();
+
         // Indicates if the player has committed to the dice result.
         public bool HasCommitedDiceResult;
 
@@ -27,14 +30,18 @@ namespace GameCommon
         // Indicates if the player has ended this turn.
         public bool HasEndedTurn;
 
-        // The results of the dice that have been rolled, assuming they have been rolled.
-        public List<int> DiceResults = new List<int>();
+        // Indicates which round of the game we are on.
+        public int RoundNumber;
 
         // Indicates if the game has ended.
         public bool HasGameEnded = false;
 
+        // Indicates if the game has started.
+        public bool HasGameStarted = false;
+
         public TurnState()
         {
+            RoundNumber = 0;
             Clear(0);
         }
 

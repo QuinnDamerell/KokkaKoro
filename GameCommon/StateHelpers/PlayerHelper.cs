@@ -270,6 +270,11 @@ namespace GameCommon.StateHelpers
         public (int?, GamePlayer) CheckForWinner()
         {
             // todo
+            // for now when everything is bought. the game is over.
+            if(m_gameHelper.Marketplace.GetBuildingTypesBuildableInCurrentGame().Count == 0)
+            {
+                return (m_gameHelper.Player.GetPlayerIndex(), m_gameHelper.Player.GetPlayer());
+            }
             return (null, null);
         }
 

@@ -92,6 +92,8 @@ namespace GameService.ServiceCore
                     return StartGame(jsonStr);
                 case KokkaKoroCommands.SendGameAction:
                     return SendGameAction(jsonStr, userName);
+                case KokkaKoroCommands.GetGameLogs:
+                    return GetGameLogs(jsonStr, userName);
                 case KokkaKoroCommands.Heartbeat:
                     return KokkaKoroResponse<object>.CreateResult(null);
             }
@@ -226,6 +228,49 @@ namespace GameService.ServiceCore
             else
             {
                 return KokkaKoroResponse<object>.CreateError($"Failed to start game: {error}.");
+            }
+        }
+
+        private KokkaKoroResponse<object> GetGameLogs(string command, string userName)
+        {
+            // Parse the request options
+            KokkaKoroRequest<GetGameLogsOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<GetGameLogsOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse get game options", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // Validate
+            if (request.CommandOptions == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (request.CommandOptions.GameId.Equals(Guid.Empty))
+            {
+                return KokkaKoroResponse<object>.CreateError("GameId is required.");
+            }
+
+            // Try to find and validate the game.
+            (ServiceGame game, KokkaKoroResponse<object> error) = GetGame(request.CommandOptions.GameId, null, true);
+            if (error != null)
+            {
+                return error;
+            }
+
+            // Try to get the logs.
+            GetGameLogsResponse response = game.GetGameLogs();
+            if (response != null)
+            {              
+                return KokkaKoroResponse<object>.CreateResult(response);
+            }
+            else
+            {
+                return KokkaKoroResponse<object>.CreateError($"Failed to get game logs.");
             }
         }
 

@@ -209,6 +209,29 @@ namespace KokkaKoro
             return games;
         }
 
+        public async Task<GetGameLogsResponse> GetGameLogs(GetGameLogsOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if (options.GameId.Equals(Guid.Empty))
+            {
+                throw new KokkaKoroException("A GameId is required.!", false);
+            }
+
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.GetGameLogs,
+                CommandOptions = options
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<GetGameLogsResponse> response = await MakeRequest<GetGameLogsResponse>(request, "get game logs");
+            return response.Data;
+        }
+
         public async Task<KokkaKoroGame> JoinGame(JoinGameOptions options)
         {
             if (options == null)

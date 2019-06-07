@@ -115,7 +115,7 @@ namespace KokkaKoro
                     {
                         response = await m_websocket.ReceiveAsync(new ArraySegment<byte>(buffer), m_readLoopCancellationToken.Token);
                         message.AddRange(new ArraySegment<byte>(buffer, 0, response.Count));
-                    } while (!response.EndOfMessage && response.CloseStatus == WebSocketCloseStatus.Empty);
+                    } while (!response.EndOfMessage && (response.CloseStatus == null || response.CloseStatus == WebSocketCloseStatus.Empty));
 
 
                     // If we are closed, make sure it's shutdown.

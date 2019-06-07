@@ -5,6 +5,21 @@ using System.Text;
 
 namespace ServiceProtocol.Common
 {
+    public class KokkaKoroBotLog
+    {
+        // The bot details
+        public KokkaKoroBot Bot;
+
+        // The player details.
+        public KokkaKoroPlayer Player;
+
+        // The standard output of the bot thus far.
+        public string StdOut;
+
+        // The standard error of the bot thus far.
+        public string StdErr;
+    }
+
     public class KokkaKoroBot
     {
         // The name of the bot

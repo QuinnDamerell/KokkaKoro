@@ -15,6 +15,9 @@ namespace GameCommon.Protocol.GameUpdateDetails
         [EnumMember(Value = "GameTimeout")]
         GameTimeout,
 
+        [EnumMember(Value = "RoundLimitHit")]
+        RoundLimitReached,
+
         [EnumMember(Value = "Error")]
         Error
     }

@@ -41,9 +41,17 @@ namespace ServiceProtocol
         [EnumMember(Value = "StartGame")]
         StartGame = 7,
 
+        // Ends the given game.
+        [EnumMember(Value = "EndGame")]
+        EndGame = 8,
+
         // Sends an action to a game.
         [EnumMember(Value = "SendGameAction")]
         SendGameAction = 8,
+
+        // Returns all of the current game logs for the given game.
+        [EnumMember(Value = "GetGameLogs")]
+        GetGameLogs = 9,
     }
 
     public class KokkaKoroRequest<T>

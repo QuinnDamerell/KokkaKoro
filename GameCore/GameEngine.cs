@@ -20,18 +20,31 @@ namespace GameCore
     public class GameEngine
     {
         GameState m_state;
-        bool m_gameStarted = false;
         LogKeeper m_logKeeper;
         RandomGenerator m_random = new RandomGenerator();
         object m_actionLock = new object();
+        int? m_roundLimit = null;
 
-        public GameEngine(List<InitalPlayer> players, GameMode mode)
+        public GameEngine(List<InitalPlayer> players, GameMode mode, int? roundLimit = null)
         {
             // Create a new logger.
             m_logKeeper = new LogKeeper();
 
+            // Set the round limit.
+            m_roundLimit = roundLimit;
+
             // Build the game initial state.
             SetupGame(players, mode);
+        }
+
+        public List<GameLog> GetLogs()
+        {
+            return m_logKeeper.GetLogs();
+        }
+
+        public GameState GetState()
+        {
+            return m_state;
         }
 
         public (GameActionResponse, List<GameLog>) ConsumeAction(GameAction<object> action, string userName)
@@ -166,7 +179,7 @@ namespace GameCore
 
             // Check if the game has not been started yet. 
             // This setup needs to happen first, because the validation will fail.
-            if (!m_gameStarted)
+            if (!stateHelper.CurrentTurn.HasGameStarted())
             {
                 StartGame(actionLog, stateHelper);
                 return;
@@ -206,10 +219,26 @@ namespace GameCore
                     throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
             }
 
+            // Check to see if the action committed made the player win.
+            (int? playerIndex, GamePlayer player) = stateHelper.Player.CheckForWinner();
+            if (playerIndex.HasValue && player != null)
+            {
+                // We have a winner!
+                EndGameInternal(actionLog, GameEndReason.PlayerWon, stateHelper);
+                return;
+            }
+
             // Check if the turn is over.
-            if(stateHelper.CurrentTurn.HasEndedTurn())
+            if (stateHelper.CurrentTurn.HasEndedTurn())
             {
                 AdvanceToNextPlayer(stateHelper);
+            }
+
+            // After advancing, check if we hit the round limit.
+            if(m_roundLimit.HasValue &&  m_state.CurrentTurnState.RoundNumber >= m_roundLimit.Value)
+            {
+                EndGameInternal(actionLog, GameEndReason.RoundLimitReached, stateHelper);
+                return;
             }
 
             // Once the actions have been made, generate the new set of options for the player.
@@ -260,7 +289,8 @@ namespace GameCore
 
         private void StartGame(List<GameLog> log, StateHelper stateHelper)
         {
-            m_gameStarted = true;
+            // Set the flag.
+            m_state.CurrentTurnState.HasGameStarted = true;
 
             // Broadcast a game start event.
             log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.GameStart, "Game Starting!", null));
@@ -311,7 +341,9 @@ namespace GameCore
             newPlayerIndex++;
             if(newPlayerIndex >= m_state.Players.Count)
             {
+                // If the players have rolled over, this is a new round.
                 newPlayerIndex = 0;
+                m_state.CurrentTurnState.RoundNumber++;
             }
 
             // And finally reset the current turn and set the new player.

@@ -92,6 +92,33 @@ namespace GameService.ServiceCore
             return m_userName;
         }
 
+        public KokkaKoroBot GetBotInfo()
+        {
+            if (!IsBot())
+            {
+                return null;
+            }
+            return m_bot.GetBotInfo();
+        }
+
+        public string GetBotStdOut()
+        {
+            if (!IsBot())
+            {
+                return null;
+            }
+            return m_bot.GetStdOut();
+        }
+
+        public string GetBotStdErr()
+        {
+            if (!IsBot())
+            {
+                return null;
+            }
+            return m_bot.GetStdErr();
+        }
+
         public KokkaKoroPlayer GetInfo()
         {
             return new KokkaKoroPlayer()
