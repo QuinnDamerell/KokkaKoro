@@ -27,6 +27,9 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "EarnIncome")]
         EarnIncome,
 
+        [EnumMember(Value = "CoinPayment")]
+        CoinPayment,
+
         [EnumMember(Value = "EndTurn")]
         EndTurn,
 

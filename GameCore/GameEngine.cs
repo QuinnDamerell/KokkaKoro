@@ -602,7 +602,7 @@ namespace GameCore
                 }
 
                 // When we get back to the current player break. We don't need to execute reds on the current player.
-                if(playerIndex != m_state.CurrentTurnState.PlayerIndex)
+                if(playerIndex == m_state.CurrentTurnState.PlayerIndex)
                 {
                     break;
                 }
