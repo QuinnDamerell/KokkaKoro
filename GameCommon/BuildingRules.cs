@@ -18,16 +18,19 @@ namespace GameCommon
         public readonly static int Cafe = 3;
         public readonly static int ConvenienceStore = 4;
         public readonly static int Forest = 5;
-        public readonly static int CheeseFactory = 6;
-        public readonly static int FurnitureFactory = 7;
-        public readonly static int Mine = 8;
-        public readonly static int FamilyRestaurant = 9;
-        public readonly static int AppleOrchard = 10;
-        public readonly static int FarmersMarket = 11;
-        public readonly static int TrainStation = 12;
-        public readonly static int ShoppingMall = 13;
-        public readonly static int RadioTower = 14;
-        public readonly static int AmusementPark = 15;
+        public readonly static int Stadium = 6;
+        public readonly static int TvStation = 7;
+        public readonly static int BusinessCenter = 8;
+        public readonly static int CheeseFactory = 9;
+        public readonly static int FurnitureFactory = 10;
+        public readonly static int Mine = 11;
+        public readonly static int FamilyRestaurant = 12;
+        public readonly static int AppleOrchard = 13;
+        public readonly static int FarmersMarket = 14;
+        public readonly static int TrainStation = 15;
+        public readonly static int ShoppingMall = 16;
+        public readonly static int RadioTower = 17;
+        public readonly static int AmusementPark = 18;
 
         List<BuildingBase> m_bulidings = new List<BuildingBase>();
 
@@ -41,16 +44,19 @@ namespace GameCommon
             m_bulidings.Add(new Cafe(3));
             m_bulidings.Add(new ConvenienceStore(4));
             m_bulidings.Add(new Forest(5));
-            m_bulidings.Add(new CheeseFactory(6));
-            m_bulidings.Add(new FurnitureFactory(7));
-            m_bulidings.Add(new Mine(8));
-            m_bulidings.Add(new FamilyRestaurant(9));
-            m_bulidings.Add(new AppleOrchard(10));
-            m_bulidings.Add(new FarmersMarket(11));
-            m_bulidings.Add(new TrainStation(12));
-            m_bulidings.Add(new ShoppingMall(13));
-            m_bulidings.Add(new RadioTower(14));
-            m_bulidings.Add(new AmusementPark(15));
+            m_bulidings.Add(new Stadium(6));
+            m_bulidings.Add(new TvStation(7));
+            m_bulidings.Add(new BusinessCenter(8));
+            m_bulidings.Add(new CheeseFactory(9));
+            m_bulidings.Add(new FurnitureFactory(10));
+            m_bulidings.Add(new Mine(11));
+            m_bulidings.Add(new FamilyRestaurant(12));
+            m_bulidings.Add(new AppleOrchard(13));
+            m_bulidings.Add(new FarmersMarket(14));
+            m_bulidings.Add(new TrainStation(15));
+            m_bulidings.Add(new ShoppingMall(16));
+            m_bulidings.Add(new RadioTower(17));
+            m_bulidings.Add(new AmusementPark(18));
         }
 
         public BuildingBase Get(int buildingIndex)

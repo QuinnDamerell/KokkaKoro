@@ -30,6 +30,9 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "CoinPayment")]
         CoinPayment,
 
+        [EnumMember(Value = "StadiumCollection")]
+        StadiumCollection,        
+
         [EnumMember(Value = "EndTurn")]
         EndTurn,
 

@@ -23,7 +23,8 @@ namespace GameCommon.Buildings
         Gear,
         Cup,
         Factory,
-        Fruit
+        Fruit,
+        MajorEstablishment
     }
 
     public class ProductionBenefit

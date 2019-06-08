@@ -630,6 +630,13 @@ namespace GameCore
             // Green cards only execute on the active player's turn
             ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Green);
 
+            //
+            // PURPLE
+            //
+            // Purple cards only execute on the active player's turn.
+            // Purple cards may result in actions we need to ask the player about.
+            ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Purple);
+
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
         }
