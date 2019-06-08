@@ -5,58 +5,58 @@ using System.Text;
 
 namespace GameCommon.Buildings
 {
-    class Mine : BuildingBase
+    class AmusementPark : BuildingBase
     {
-        internal Mine(int buildingIndex)
+        internal AmusementPark(int buildingIndex) 
             : base(buildingIndex)
         { }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetName()
         {
-            return "Mine";
+            return "Amusement Park";
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetRule()
         {
-            return "Get 5 coin from the bank. (anyone's turn)";
+            return "If you roll doubles, take another turn after this one.";
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override (int, int) GetActivationRange()
         {
-            return (9, 9);
+            return (-1, -1);
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override int GetBuildCost()
         {
-            return 6;
+            return 16;
         }
 
         // See comments in base class. (BuildingBase.cs)
         internal override int InternalGetMaxBuildingCountInGame()
         {
-            return 6;
+            return int.MaxValue;
         }
 
         // See comments in base class. (BuildingBase.cs)
         internal override int InternalGetMaxBuildingCountPerPlayer()
         {
-            return -1;
+            return 1;
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override EstablishmentProduction GetEstablishmentProduction()
         {
-            return EstablishmentProduction.Gear;
+            return EstablishmentProduction.None;
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override EstablishmentColor GetEstablishmentColor()
         {
-            return EstablishmentColor.Blue;
+            return EstablishmentColor.Landmark;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -68,13 +68,13 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override bool ActivatesOnOtherPlayersTurns()
         {
-            return true;
+            return false;
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override BuildingActivationBase GetActivation()
         {
-            return new BlueCardActivation(5);
+            return null;
         }
     }
 }

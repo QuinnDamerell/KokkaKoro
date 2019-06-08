@@ -41,6 +41,31 @@ namespace GameCommon.StateHelpers
                     return $"Market's building index {i} has a negative value";
                 }
             }
+            for(int i = 0; i < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); i++)
+            {
+                if(m_gameHelper.BuildingRules[i].GetBuldingIndex() != i)
+                {
+                    return $"Building rules index {i} has an incorrect GetBuldingIndex()";
+                }
+            }
+            if(m_gameHelper.BuildingRules.GetCountOfUniqueTypes() < 14
+                || !(m_gameHelper.BuildingRules[BuildingRules.WheatField] is WheatField)
+                || !(m_gameHelper.BuildingRules[BuildingRules.Ranch] is Ranch)
+                || !(m_gameHelper.BuildingRules[BuildingRules.Bakery] is Bakery)
+                || !(m_gameHelper.BuildingRules[BuildingRules.ConvenienceStore] is ConvenienceStore)
+                || !(m_gameHelper.BuildingRules[BuildingRules.Forest] is Forest)
+                || !(m_gameHelper.BuildingRules[BuildingRules.CheeseFactory] is CheeseFactory)
+                || !(m_gameHelper.BuildingRules[BuildingRules.FurnitureFactory] is FurnitureFactory)
+                || !(m_gameHelper.BuildingRules[BuildingRules.Mine] is Mine)
+                || !(m_gameHelper.BuildingRules[BuildingRules.AppleOrchard] is AppleOrchard)
+                || !(m_gameHelper.BuildingRules[BuildingRules.FarmersMarket] is FarmersMarket)
+                || !(m_gameHelper.BuildingRules[BuildingRules.TrainStation] is TrainStation)
+                || !(m_gameHelper.BuildingRules[BuildingRules.ShoppingMall] is ShoppingMall)
+                || !(m_gameHelper.BuildingRules[BuildingRules.RadioTower] is RadioTower)
+                || !(m_gameHelper.BuildingRules[BuildingRules.AmusementPark] is AmusementPark))
+            {
+                return $"Building rules mismatch between building constants and object type.";
+            }
             return null;
         }
 

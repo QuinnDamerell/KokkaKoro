@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GameCommon.BuildingActivations;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,7 +7,8 @@ namespace GameCommon.Buildings
 {
     class Bakery : BuildingBase
     {
-        internal Bakery()
+        internal Bakery(int buildingIndex)
+            : base(buildingIndex)
         { }
 
         // See comments in base class. (BuildingBase.cs)
@@ -64,21 +66,15 @@ namespace GameCommon.Buildings
         }
 
         // See comments in base class. (BuildingBase.cs)
-        public override int GetCoinsOnMyTurn()
+        public override bool ActivatesOnOtherPlayersTurns()
         {
-            return 1;
+            return false;
         }
 
         // See comments in base class. (BuildingBase.cs)
-        public override int GetCoinsAnyonesTurn()
+        public override BuildingActivationBase GetActivation()
         {
-            return 0;
-        }
-
-        // See comments in base class. (BuildingBase.cs)
-        public override List<ProductionBenefit> GetProductionBenfits()
-        {
-            return null;
+            return new GreenCardActivation(1);
         }
     }
 }

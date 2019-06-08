@@ -1,4 +1,6 @@
-﻿using System;
+﻿using GameCommon.Buildings;
+using GameCommon.Protocol;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -24,8 +26,14 @@ namespace GameCommon.StateHelpers
             {
                 return "There are no players";
             }
+            int count = 0;
             foreach (GamePlayer p in s.Players)
             {
+                if(p.PlayerIndex != count)
+                {
+                    return "The player index doesn't match the list index.";
+                }
+                count++;
                 if (String.IsNullOrWhiteSpace(p.Name) || String.IsNullOrWhiteSpace(p.UserName))
                 {
                     return "A user has a empty name or username.";
@@ -80,7 +88,7 @@ namespace GameCommon.StateHelpers
                 index = GetPlayerIndex();
             }
 
-            if (!ValidateUserIndex(index))
+            if (!ValidatePlayerIndex(index))
             {
                 return null;
             }
@@ -97,13 +105,37 @@ namespace GameCommon.StateHelpers
                 index = GetPlayerIndex();
             }
 
-            if (!ValidateUserIndex(index))
+            if (!ValidatePlayerIndex(index))
             {
                 return null;
             }
 
             GameState s = m_gameHelper.GetState();
             return s.Players[index].Name;
+        }
+
+        public GamePlayer GetPlayerFromIndex(int? playerIndex = null)
+        {
+            GameState s = m_gameHelper.GetState();
+
+            if (!playerIndex.HasValue)
+            {
+                int count = 0;
+                foreach(GamePlayer p in s.Players)
+                {
+                    if(p.UserName.Equals(m_gameHelper.GetPerspectiveUserName()))
+                    {
+                        playerIndex = count;
+                        break;
+                    }
+                    count++;
+                }
+            }
+            if(!playerIndex.HasValue || !ValidatePlayerIndex(playerIndex.Value))
+            {
+                return null;
+            }
+            return s.Players[playerIndex.Value];
         }
 
         public GamePlayer GetPlayer(string userName = null)
@@ -119,12 +151,100 @@ namespace GameCommon.StateHelpers
 
         public int GetMaxRollsAllowed(string userName = null)
         {
-            return 1;
+            GamePlayer p = GetPlayer(userName);
+            if (p == null)
+            {
+                return -1;
+            }
+            // If the player owns a radio tower, they can reroll the dice once per turn if desired..
+            return p.OwnedBuildings[BuildingRules.RadioTower] > 0 ? 2 : 1;
         }
 
         public int GetMaxDiceCountCanRoll(string userName = null)
         {
-            return 1;
+            GamePlayer p = GetPlayer(userName);
+            if(p == null)
+            {
+                return -1;
+            }
+            // If the player owns a train station, they can roll two dice.
+            return p.OwnedBuildings[BuildingRules.TrainStation] > 0 ? 2 : 1;
+        }
+
+        // Returns if the player can take another turn after their current turn.
+        public bool GetsExtraTurn(string userName = null)
+        {
+            GamePlayer p = GetPlayer(userName);
+            if (p == null)
+            {
+                return false;
+            }
+
+            // Check if they rolled doubles
+            GameState s = m_gameHelper.GetState();
+            if (s.CurrentTurnState.DiceResults.Count < 2)
+            {
+                return false;
+            }           
+            bool hasDoubleMatch = false;
+            int outterCount = 0;
+            foreach(int outer in s.CurrentTurnState.DiceResults)
+            {
+                int innerCount = 0;
+                foreach (int inner in s.CurrentTurnState.DiceResults)
+                {
+                    if(outterCount != innerCount && outer == inner)
+                    {
+                        hasDoubleMatch = true;
+                        break;
+                    }
+                    innerCount++;
+                }
+                outterCount++;
+                if(hasDoubleMatch)
+                {
+                    break;
+                }
+            }
+            if(!hasDoubleMatch)
+            {
+                return false;
+            }           
+
+            // If the player owns a amusement park, they get another turn if they roll doubles.
+            return p.OwnedBuildings[BuildingRules.AmusementPark] > 0;
+        }
+
+        // Indicates if the player has a shopping mall.
+        public bool HasShoppingMall(string userName = null)
+        {
+            GamePlayer p = GetPlayer(userName);
+            if (p == null)
+            {
+                return false;
+            }
+            // If the player owns a shopping mall, they get +1 for each cup and bread establishment.
+            return p.OwnedBuildings[BuildingRules.ShoppingMall] > 0;
+        }
+
+        // Returns the number of buildings this player currently has built.
+        public int GetBuiltCount(int buildingIndex, int? playerIndex = null)
+        {
+            // Validate the building index
+            if (!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            {
+                return -1;
+            }
+
+            // Get the player
+            GamePlayer p = GetPlayerFromIndex(playerIndex);
+            if (p == null)
+            {
+                return -1;
+            }
+
+            // Get the building they own.
+            return p.OwnedBuildings[buildingIndex];
         }
 
         // Returns the number of buildings this player currently has built.
@@ -240,7 +360,7 @@ namespace GameCommon.StateHelpers
             return canAffordAndBuildable;
         }
 
-        public bool ValidateUserIndex(int index = -1)
+        public bool ValidatePlayerIndex(int index = -1)
         {
             GameState s = m_gameHelper.GetState();
             if (index < 0 || index >= s.Players.Count)
@@ -267,63 +387,47 @@ namespace GameCommon.StateHelpers
         }
 
         // Returns null if no winner was found, otherwise the winning player.
-        public (int?, GamePlayer) CheckForWinner()
+        public GamePlayer CheckForWinner()
         {
-            // todo
-            // for now when everything is bought. the game is over.
-            if(m_gameHelper.Marketplace.GetBuildingTypesBuildableInCurrentGame().Count == 0)
+            GameState s = m_gameHelper.GetState();
+            foreach (GamePlayer p in s.Players)
             {
-                return (m_gameHelper.Player.GetPlayerIndex(), m_gameHelper.Player.GetPlayer());
+                // If they own all of the landmarks, they win!
+                if (p.OwnedBuildings[BuildingRules.TrainStation] > 0
+                    && p.OwnedBuildings[BuildingRules.ShoppingMall] > 0
+                    && p.OwnedBuildings[BuildingRules.AmusementPark] > 0
+                    && p.OwnedBuildings[BuildingRules.RadioTower] > 0)
+                {
+                    return p;
+                }
             }
-            return (null, null);
+            return null;
         }
 
-        public int GetIncomeOnMyTurn(int buildingIndex, string userName = null)
+        // Returns the count of buildings built by the player that have the given production type.
+        public int GetTotalProductionTypeBuilt(EstablishmentProduction production, int? playerIndex = null)
         {
-            if(!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            if(!playerIndex.HasValue)
             {
-                return 0;
+                playerIndex = GetPlayerIndex();
             }
-            GamePlayer p = GetPlayer(userName);
-            if(p == null)
+            if(!ValidatePlayerIndex(playerIndex.Value))
             {
-                return 0;
-            }
-
-            // If they don't own it, they don't get anything.
-            if(p.OwnedBuildings[buildingIndex] == 0)
-            {
-                return 0;
+                return -1;
             }
 
-            // Get the number of coins we get per building.
-            int coinsPerEstablishment = m_gameHelper.BuildingRules[buildingIndex].GetCoinsOnMyTurn();
-            int coinsTotal = coinsPerEstablishment * p.OwnedBuildings[buildingIndex];
-            return coinsTotal;
-        }
-
-        public int GetIncomeOnAnyonesTurn(int buildingIndex, string userName = null)
-        {
-            if (!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            // Count the building count for the given production.
+            GameState s = m_gameHelper.GetState();
+            int total = 0;
+            for (int buildingIndex = 0; buildingIndex < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); buildingIndex++)
             {
-                return 0;
+                BuildingBase b = m_gameHelper.BuildingRules[buildingIndex];
+                if(b.GetEstablishmentProduction() == production)
+                {
+                    total += GetBuiltCount(buildingIndex, playerIndex);
+                }
             }
-            GamePlayer p = GetPlayer(userName);
-            if (p == null)
-            {
-                return 0;
-            }
-
-            // If they don't own it, they don't get anything.
-            if (p.OwnedBuildings[buildingIndex] == 0)
-            {
-                return 0;
-            }
-
-            // Get the number of coins we get per building.
-            int coinsPerEstablishment = m_gameHelper.BuildingRules[buildingIndex].GetCoinsAnyonesTurn();
-            int coinsTotal = coinsPerEstablishment * p.OwnedBuildings[buildingIndex];
-            return coinsTotal;
+            return total;
         }
     }
 }

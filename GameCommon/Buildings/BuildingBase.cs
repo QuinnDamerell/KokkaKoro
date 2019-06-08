@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GameCommon.BuildingActivations;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,7 +10,8 @@ namespace GameCommon.Buildings
         Blue,
         Green,
         Red,
-        Purple
+        Purple,
+        Landmark
     }
 
     public enum EstablishmentProduction
@@ -18,7 +20,10 @@ namespace GameCommon.Buildings
         Wheat,
         Cattle,
         Bread,
-        Gear
+        Gear,
+        Cup,
+        Factory,
+        Fruit
     }
 
     public class ProductionBenefit
@@ -68,14 +73,23 @@ namespace GameCommon.Buildings
         // Returns if this is one of the default buildings.
         public abstract bool IsStartingBuilding();
 
-        // Given a dice roll, this returns how many coins the player gets on their turn.
-        public abstract int GetCoinsOnMyTurn();
+        // Indicates if the building activates on other player's turns or not.
+        public abstract bool ActivatesOnOtherPlayersTurns();
 
-        // Given a dice roll, this returns how many coins the player gets on anyone's turn.
-        public abstract int GetCoinsAnyonesTurn();
+        // Gets the activation action for the building.
+        public abstract BuildingActivationBase GetActivation();
 
-        // Returns a list of production types this gets amplified by.
-        public abstract List<ProductionBenefit> GetProductionBenfits();
+        int m_buildingIndex;
+        public BuildingBase(int buildingIndex)
+        {
+            m_buildingIndex = buildingIndex;
+        }
+
+        // Returns the building index in the BuildingRules for this Building.
+        public int GetBuldingIndex()
+        {
+            return m_buildingIndex;
+        }
 
         // Helper function, returns if the dice roll is in activation range of this
         // card or not.
@@ -84,5 +98,7 @@ namespace GameCommon.Buildings
             (int min, int max) = GetActivationRange();
             return diceValue >= min && diceValue <= max;
         }
+
+
     }
 }

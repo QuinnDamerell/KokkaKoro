@@ -1,4 +1,5 @@
 ﻿using GameCommon.StateHelpers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -58,6 +59,14 @@ namespace GameCommon
 
     public class GameState
     {
+        // This is the game version the local client is running.
+        // The game version will be updated whenever there are breaking changes to the cards or rules.
+        [JsonIgnore]
+        public static int GameVersion = 1;
+
+        // This is the version of the game the remote sever is running.
+        public int RemoteGameVersion = GameVersion;
+
         // The game mode being played.
         public GameMode Mode;
 

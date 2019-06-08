@@ -5,34 +5,34 @@ using System.Text;
 
 namespace GameCommon.Buildings
 {
-    class Mine : BuildingBase
+    class FurnitureFactory : BuildingBase
     {
-        internal Mine(int buildingIndex)
+        internal FurnitureFactory(int buildingIndex)
             : base(buildingIndex)
         { }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetName()
         {
-            return "Mine";
+            return "Furniture Factory";
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetRule()
         {
-            return "Get 5 coin from the bank. (anyone's turn)";
+            return "Get 3 coins from the bank for each gear establishment you own. (your turn only)";
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override (int, int) GetActivationRange()
         {
-            return (9, 9);
+            return (8, 8);
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override int GetBuildCost()
         {
-            return 6;
+            return 3;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -50,13 +50,13 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override EstablishmentProduction GetEstablishmentProduction()
         {
-            return EstablishmentProduction.Gear;
+            return EstablishmentProduction.Factory;
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override EstablishmentColor GetEstablishmentColor()
         {
-            return EstablishmentColor.Blue;
+            return EstablishmentColor.Green;
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -68,13 +68,13 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override bool ActivatesOnOtherPlayersTurns()
         {
-            return true;
+            return false;
         }
 
         // See comments in base class. (BuildingBase.cs)
         public override BuildingActivationBase GetActivation()
         {
-            return new BlueCardActivation(5);
+            return new GreenCardActivation(EstablishmentProduction.Gear, 3);
         }
     }
 }

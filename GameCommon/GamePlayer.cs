@@ -6,6 +6,9 @@ namespace GameCommon
 {
     public class GamePlayer
     {
+        // The player index for this player, just for reference.
+        public int PlayerIndex;
+
         // A friendly name for the player
         public string Name;
 

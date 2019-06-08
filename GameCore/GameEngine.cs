@@ -134,7 +134,6 @@ namespace GameCore
             // Now try to find if there was a winner.
             // We try catch this to make sure we always send the end message.
             GamePlayer winner = null;
-            int? playerIndex = null;
             try
             {
                 // If we didn't get a state helper just make one. 
@@ -145,7 +144,7 @@ namespace GameCore
                 }
 
                 // Create an empty state helper to check for a winner.
-                (playerIndex, winner) = stateHelper.Player.CheckForWinner();
+                winner = stateHelper.Player.CheckForWinner();
             }
             catch (GameError e)
             {
@@ -160,6 +159,11 @@ namespace GameCore
             }
 
             // Create the end game message
+            int? playerIndex = null;
+            if (winner != null)
+            {
+                playerIndex = winner.PlayerIndex;
+            }
             actionLog.Add(GameLog.CreateGameStateUpdate<GameEndDetails>(m_state, StateUpdateType.GameEnd, $"The Game is over because {reason.ToString()}! {(winner == null ? "There was no winner!" : $"{winner.Name} won!")}",
                 new GameEndDetails() { PlayerIndex = playerIndex, Reason = reason }));
 
@@ -220,8 +224,8 @@ namespace GameCore
             }
 
             // Check to see if the action committed made the player win.
-            (int? playerIndex, GamePlayer player) = stateHelper.Player.CheckForWinner();
-            if (playerIndex.HasValue && player != null)
+            GamePlayer player = stateHelper.Player.CheckForWinner();
+            if (player != null)
             {
                 // We have a winner!
                 EndGameInternal(actionLog, GameEndReason.PlayerWon, stateHelper);
@@ -231,7 +235,7 @@ namespace GameCore
             // Check if the turn is over.
             if (stateHelper.CurrentTurn.HasEndedTurn())
             {
-                AdvanceToNextPlayer(stateHelper);
+                AdvanceToNextPlayer(actionLog, stateHelper);
             }
 
             // After advancing, check if we hit the round limit.
@@ -261,10 +265,11 @@ namespace GameCore
             m_state.Market = Marketplace.Create(buildingRules);
 
             // Add the players.
+            int count = 0;
             foreach (InitalPlayer p in players)
             {
                 // Create a player.
-                GamePlayer gamePlayer = new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3 };
+                GamePlayer gamePlayer = new GamePlayer() { Name = p.FriendlyName, UserName = p.UserName, Coins = 3, PlayerIndex = count };
 
                 // Allocate a space for every building they can own. For starting buildings, give them one.
                 for (int i = 0; i < buildingRules.GetCountOfUniqueTypes(); i++)
@@ -281,6 +286,7 @@ namespace GameCore
 
                 // Add the player.
                 m_state.Players.Add(gamePlayer);
+                count++;
             }
 
             // Adding building to the marketplace
@@ -325,7 +331,7 @@ namespace GameCore
             }
         }
 
-        private void AdvanceToNextPlayer(StateHelper stateHelper)
+        private void AdvanceToNextPlayer(List<GameLog> actionLog, StateHelper stateHelper)
         {
             if(m_state.CurrentTurnState.Rolls == 0 || m_state.CurrentTurnState.DiceResults.Count == 0 || !stateHelper.CurrentTurn.HasCommittedToDiceResult())
             {
@@ -339,7 +345,19 @@ namespace GameCore
             // Find the next player.
             int newPlayerIndex = m_state.CurrentTurnState.PlayerIndex;
             newPlayerIndex++;
-            if(newPlayerIndex >= m_state.Players.Count)
+
+            // Check if the player has the amusement park and rolled doubles, they get to take another turn.
+            if (stateHelper.Player.GetsExtraTurn())
+            {
+                // If so, set them to be the player again.
+                newPlayerIndex = m_state.CurrentTurnState.PlayerIndex;
+
+                // Log it
+                actionLog.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.ExtraTurn, $"{stateHelper.Player.GetPlayer().Name} rolled double {m_state.CurrentTurnState.DiceResults[0]}s and has an Amusement Park, so they get to take an extra turn!", null));
+            }
+
+            // Check for a player index roll over.
+            if (newPlayerIndex >= m_state.Players.Count)
             {
                 // If the players have rolled over, this is a new round.
                 newPlayerIndex = 0;
@@ -499,7 +517,7 @@ namespace GameCore
             // Make the transaction.
 
             // Take the player's coins.
-            GamePlayer p = stateHelper.Player.GetPlayer();
+            GamePlayer p = stateHelper.Player.GetPlayer(null);
             p.Coins -= stateHelper.BuildingRules[options.BuildingIndex].GetBuildCost();
 
             // Add the building to the player.
@@ -566,104 +584,102 @@ namespace GameCore
                 throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when there were no dice results.", false);
             }
 
+            // 
+            // REDS
+            //
+            // First, starting with the active player, in reverse order we need to settle red cards.
+            // Each player in reverse order should get the full amount from the player for all their red cards before moving on.
+            // Red cards don't activate on the current player.
+
+            // Start with the current player - 1;
+            int playerIndex = m_state.CurrentTurnState.PlayerIndex - 1;
+            while(true)
+            {
+                // If we roll under, go back to the highest player.
+                if(playerIndex < 0)
+                {
+                    playerIndex = m_state.Players.Count - 1;
+                }
+
+                // When we get back to the current player break. We don't need to execute reds on the current player.
+                if(playerIndex != m_state.CurrentTurnState.PlayerIndex)
+                {
+                    break;
+                }
+
+                // Execute all red buildings for this player.
+                ExecuteBuildingColorIncomeForPlayer(log, stateHelper, playerIndex, EstablishmentColor.Red);
+
+                // Move to the next.
+                playerIndex--;
+            }
+
+            //
+            // BLUES
+            //
+            // Next, settle any blue cards from any players.
+            // Player order doesn't matter.
+            for(playerIndex = 0; playerIndex < m_state.Players.Count; playerIndex++)
+            {
+                ExecuteBuildingColorIncomeForPlayer(log, stateHelper, playerIndex, EstablishmentColor.Blue);
+            }
+
+            //
+            // GREENS
+            //
+            // Green cards only execute on the active player's turn
+            ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Green);
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+        }
+
+        private void ExecuteBuildingColorIncomeForPlayer(List<GameLog> log, StateHelper stateHelper, int playerIndex, EstablishmentColor color)
+        {
             // Get the sum of the roll.
             int diceSum = 0;
-            foreach(int r in m_state.CurrentTurnState.DiceResults)
+            foreach (int r in m_state.CurrentTurnState.DiceResults)
             {
                 diceSum += r;
             }
 
-            // First, we must resolve red buildings.
-            //for (int b = 0; b < stateHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
-            //{
-            //    BuildingBase building = stateHelper.BuildingRules[b];
-            //    if (building.GetEstablishmentColor() == EstablishmentColor.Red)
-            //    {
-            //        // Check to see if it activated.
-            //        if (building.IsDiceInRange(diceSum))
-            //        {
-            //            ExecuteBuildingIncome(log, stateHelper, b);
-            //        }
-            //    }
-            //}
+            // Figure out if this player is the current player.
+            bool isActivePlayer = playerIndex == m_state.CurrentTurnState.PlayerIndex;
 
-            // Now build and green.
-            for (int b = 0; b < stateHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
+            // Look for any of their buildings that activate.
+            for (int buildingIndex = 0; buildingIndex < stateHelper.BuildingRules.GetCountOfUniqueTypes(); buildingIndex++)
             {
-                BuildingBase building = stateHelper.BuildingRules[b];
-                EstablishmentColor color = building.GetEstablishmentColor();
-                if (color == EstablishmentColor.Green || color == EstablishmentColor.Blue)
+                // Check if the building activates.
+                BuildingBase building = stateHelper.BuildingRules[buildingIndex];
+                if (building.GetEstablishmentColor() == color && building.IsDiceInRange(diceSum))
                 {
-                    // Check to see if it activated.
-                    if (building.IsDiceInRange(diceSum))
+                    // Active the card if this is the active player or if the card activates on other player's turns.
+                    if((isActivePlayer || building.ActivatesOnOtherPlayersTurns()))
                     {
-                        ExecuteBuildingIncome(log, stateHelper, b);
+                        // Execute for every building the player has.
+                        int built = stateHelper.Player.GetBuiltCount(buildingIndex, playerIndex);
+                        for (int i = 0; i < built; i++)
+                        {
+                            // This building should activate.
+                            building.GetActivation().Activate(log, m_state, stateHelper, buildingIndex, playerIndex);
+                            ThrowIfInvalidState(stateHelper);
+                        }
+
+                        // If the player has a shopping mall, they get 1 extra coin per building for any activate cup or bread establishment.
+                        if(stateHelper.Player.HasShoppingMall() &&
+                            (building.GetEstablishmentProduction() == EstablishmentProduction.Bread || building.GetEstablishmentProduction() == EstablishmentProduction.Cup))
+                        {
+                            // Give them one coin for each building.
+                            stateHelper.Player.GetPlayer().Coins += built;
+
+                            // Log it
+                            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.EarnIncome, $"{stateHelper.Player.GetPlayer().Name} earned an extra {built} from a {building.GetName()}(s) because they have the shopping mall.",
+                                        new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = built, PlayerIndex = playerIndex }));
+                        }
                     }
                 }
-            }
-
-            // Validate things are good.
-            ThrowIfInvalidState(stateHelper);
+            }            
         }
-
-
-        private void ExecuteBuildingIncome(List<GameLog> log, StateHelper stateHelper, int buildingIndex)
-        {
-            if(!stateHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
-            {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Tried to execute building income on a building index out of range.", false);
-            }
-
-            BuildingBase building = stateHelper.BuildingRules[buildingIndex];
-            switch(building.GetEstablishmentColor())
-            {
-                case EstablishmentColor.Blue:
-                    {
-                        // Blue buildings earn income on anyone's turn. So apply the building to anyone who has it.
-                        foreach (GamePlayer player in m_state.Players)
-                        {
-                            int coinsEarned = stateHelper.Player.GetIncomeOnAnyonesTurn(buildingIndex, player.UserName);
-
-                            // If they earned coins, report it.
-                            if (coinsEarned != 0)
-                            {
-                                player.Coins += coinsEarned;
-                                log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.EarnIncome, $"{player.Name} earned {coinsEarned} from {player.OwnedBuildings[buildingIndex]} {building.GetName()}(s)",
-                                            new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = coinsEarned, PlayerIndex = stateHelper.Player.GetPlayerIndex(player.UserName) }));
-                            }
-                        }
-                        break;
-                    }
-                case EstablishmentColor.Green:
-                    {
-                        // Green buildings only earn on the player's turn.
-                        GamePlayer player = stateHelper.Player.GetPlayer(stateHelper.CurrentTurn.GetActiveTurnPlayerUserName());
-
-                        // Check if the player earns anything.
-                        int coinsEarned = stateHelper.Player.GetIncomeOnMyTurn(buildingIndex, player.UserName);
-
-                        // If they earned coins, report it.
-                        if (coinsEarned != 0)
-                        {
-                            player.Coins += coinsEarned;
-                            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.EarnIncome, $"{player.Name} earned {coinsEarned} from {player.OwnedBuildings[buildingIndex]} {building.GetName()}(s)",
-                                        new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = coinsEarned, PlayerIndex = stateHelper.Player.GetPlayerIndex(player.UserName) }));;
-                        }
-                        break;
-                    }
-                case EstablishmentColor.Red:
-                    break;
-                case EstablishmentColor.Purple:
-                    break;
-                default:
-                    throw GameError.Create(m_state, ErrorTypes.InvalidState, "Tried to execute building income on a building with an unknown color.", false);                    
-            }
-
-            // Validate things are good.
-            ThrowIfInvalidState(stateHelper);
-        }
-
-
 
         private void ThrowIfInvalidState(StateHelper stateHelper)
         {

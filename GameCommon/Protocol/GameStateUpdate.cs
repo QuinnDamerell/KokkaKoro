@@ -29,6 +29,9 @@ namespace GameCommon.Protocol
 
         [EnumMember(Value = "EndTurn")]
         EndTurn,
+
+        [EnumMember(Value = "ExtraTurn")]
+        ExtraTurn,
     }
 
     public class GameStateUpdate<T>

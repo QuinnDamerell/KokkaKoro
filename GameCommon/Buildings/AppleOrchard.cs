@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GameCommon.BuildingActivations;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,13 +7,14 @@ namespace GameCommon.Buildings
 {
     class AppleOrchard : BuildingBase
     {
-        internal AppleOrchard()
+        internal AppleOrchard(int buildingIndex) 
+            : base(buildingIndex)
         { }
 
         // See comments in base class. (BuildingBase.cs)
         public override string GetName()
         {
-            return "AppleOrchard";
+            return "Apple Orchard";
         }
 
         // See comments in base class. (BuildingBase.cs)
@@ -64,21 +66,15 @@ namespace GameCommon.Buildings
         }
 
         // See comments in base class. (BuildingBase.cs)
-        public override int GetCoinsOnMyTurn()
+        public override bool ActivatesOnOtherPlayersTurns()
         {
-            return 0;
+            return true;
         }
 
         // See comments in base class. (BuildingBase.cs)
-        public override int GetCoinsAnyonesTurn()
+        public override BuildingActivationBase GetActivation()
         {
-            return 3;
-        }
-
-        // See comments in base class. (BuildingBase.cs)
-        public override List<ProductionBenefit> GetProductionBenfits()
-        {
-            return null;
+            return new BlueCardActivation(3);
         }
     }
 }
