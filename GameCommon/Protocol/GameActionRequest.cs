@@ -23,7 +23,7 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "TvStationPayout")]
         TvStationPayout,
 
-        // Tells the server the client has decided the player and building they want to swap due to a business center activatino.
+        // Tells the server the client has decided the player and building they want to swap due to a business center activation.
         [EnumMember(Value = "BusinessCenterBuildingSwap")]
         BusinessCenterBuildingSwap,
 
