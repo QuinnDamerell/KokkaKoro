@@ -1,4 +1,5 @@
 ﻿using GameCommon.BuildingActivations;
+using GameCommon.Protocol;
 using GameCommon.StateHelpers;
 using Newtonsoft.Json;
 using System;
@@ -23,8 +24,10 @@ namespace GameCommon
         // The results of the dice that have been rolled, assuming they have been rolled.
         public List<int> DiceResults = new List<int>();
 
-        // If any activations exist, the player has actions they need to resolve.
-        public List<BuildingActivationBase> Activations = new List<BuildingActivationBase>();
+        // If anything in this list exits, there are special actions the player must resolved.
+        // The actions MUST BE RESOLVED BEFORE ANY OTHER TURN ACTIONS TAKE PLACE.
+        // The actions MUST BE RESOLVED IN THE LIST ORDER.
+        public List<GameActionType> SpecialActions = new List<GameActionType>();
 
         // Indicates if the player has committed to the dice result.
         public bool HasCommitedDiceResult;
@@ -58,7 +61,7 @@ namespace GameCommon
             HasBougthBuilding = false;
             HasCommitedDiceResult = false;
             HasEndedTurn = false;
-            Activations.Clear();
+            SpecialActions.Clear();
         }
     }
 

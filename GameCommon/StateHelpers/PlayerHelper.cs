@@ -61,6 +61,12 @@ namespace GameCommon.StateHelpers
             return null;
         }
 
+        public int GetPlayerCount()
+        {
+            GameState s = m_gameHelper.GetState();
+            return s.Players.Count;
+        }
+
         public int GetPlayerIndex(string userName = null)
         {
             GamePlayer p = ValidatePlayer(userName);

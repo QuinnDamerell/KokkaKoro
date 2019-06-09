@@ -57,7 +57,10 @@ namespace GameService
 
             app.UseMvc();
 
-  
+            // try to find what address we are bound to. If we can we will let bots connect locally
+            // if not we will direct them through the host name.
+            try
+            {
                 // Find the ports and IPs it bound to.
                 var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
                 foreach (var address in serverAddressesFeature.Addresses)
@@ -70,8 +73,12 @@ namespace GameService
                     Logger.Info($"Server bound to {fixedAddr}");
                     Utils.SetServiceLocalAddress(fixedAddr);
                 }
-
-
+            }
+            catch(Exception e)
+            {
+                Logger.Error("Failed to find localy bound address.", e);
+            }
+        
             // This code handles websockets coming into the system.
             app.Use(async (context, next) =>
             {

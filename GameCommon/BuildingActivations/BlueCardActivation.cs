@@ -22,7 +22,7 @@ namespace GameCommon.BuildingActivations
             return m_amount;
         }
 
-        public override BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
+        public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
         {
             // Get common details and validate.
             (GamePlayer p, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "BlueCard", buildingIndex, playerIndexInvokedOn);
@@ -33,8 +33,6 @@ namespace GameCommon.BuildingActivations
             // Log it
             log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {m_amount} from a {b.GetName()}",
                         new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = m_amount, PlayerIndex = playerIndexInvokedOn }));                 
-
-            return null;
         }
 
         public override GameActionType? GetAction()

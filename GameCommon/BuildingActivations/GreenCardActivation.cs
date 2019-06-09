@@ -49,7 +49,7 @@ namespace GameCommon.BuildingActivations
             return m_amount;
         }
 
-        public override BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
+        public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
         {
             // Get common details and validate.
             (GamePlayer p, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "GreenCard", buildingIndex, playerIndexInvokedOn);
@@ -79,9 +79,7 @@ namespace GameCommon.BuildingActivations
             else
             {
                 throw GameError.Create(state, ErrorTypes.InvalidState, $"GreenActivation was activated with an unknown type.", false);
-            }
-
-            return null;
+            }            
         }
 
         public override GameActionType? GetAction()

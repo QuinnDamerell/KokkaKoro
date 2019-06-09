@@ -205,23 +205,31 @@ namespace GameCore
                 throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"In the current turn state, it's not valid to {action.Action}.", true);
             }
 
-            // Handle the action.
-            switch (action.Action)
+            // If there are special actions, handle them.
+            if (stateHelper.CurrentTurn.HasPendingSpecialActions())
             {
-                case GameActionType.RollDice:
-                    HandleRollDiceAction(actionLog, action, stateHelper);
-                    break;
-                case GameActionType.CommitDiceResult:
-                    HandleDiceRollCommitAction(actionLog, action, stateHelper);
-                    break;
-                case GameActionType.BuildBuilding:
-                    HandleBuildAction(actionLog, action, stateHelper);
-                    break;
-                case GameActionType.EndTurn:
-                    HandleEndTurnAction(actionLog, action, stateHelper);
-                    break;
-                default:
-                    throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
+                HandleSpecialAction(actionLog, action, stateHelper);
+            }
+            else
+            {
+                // Handle the action.
+                switch (action.Action)
+                {
+                    case GameActionType.RollDice:
+                        HandleRollDiceAction(actionLog, action, stateHelper);
+                        break;
+                    case GameActionType.CommitDiceResult:
+                        HandleDiceRollCommitAction(actionLog, action, stateHelper);
+                        break;
+                    case GameActionType.BuildBuilding:
+                        HandleBuildAction(actionLog, action, stateHelper);
+                        break;
+                    case GameActionType.EndTurn:
+                        HandleEndTurnAction(actionLog, action, stateHelper);
+                        break;
+                    default:
+                        throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
+                }
             }
 
             // Check to see if the action committed made the player win.
@@ -450,9 +458,9 @@ namespace GameCore
             {
                 throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't commit the results.", true);
             }
-            if(m_state.CurrentTurnState.Activations == null || m_state.CurrentTurnState.Activations.Count != 0)
+            if(m_state.CurrentTurnState.SpecialActions == null || m_state.CurrentTurnState.SpecialActions.Count != 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has pending activations that need to be resolved.", true);
+                throw GameError.Create(m_state, ErrorTypes.PendingSpecialActivations, $"The player has pending special activations that need to be resolved.", true);
             }
 
             // Commit the dice result.
@@ -479,7 +487,8 @@ namespace GameCore
             ThrowIfInvalidState(stateHelper);
 
             // Let the earn income logic run. If there are activations returned, there are actions the player needs to decided on.
-            m_state.CurrentTurnState.Activations = EarnIncome(log, stateHelper); 
+            List<GameActionType> specialActions = EarnIncome(log, stateHelper);
+            m_state.CurrentTurnState.SpecialActions = specialActions;
         }
 
         private void HandleBuildAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
@@ -573,11 +582,40 @@ namespace GameCore
             ThrowIfInvalidState(stateHelper);
         }
 
+        private void HandleSpecialAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
+        {
+            // Validate
+            if(!stateHelper.CurrentTurn.HasPendingSpecialActions())
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"HandleSpecialAction was called but there were no special actions.", false);
+            }
+            if(stateHelper.GetState().CurrentTurnState.SpecialActions[0] != action.Action)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"HandleSpecialAction was called with action {action.Action.ToString()} but it's not the top action on the list.", false);
+            }
+
+            // Find the action handler 
+            BuildingActivationBase act = BuildingActivationBase.GetActivation(action.Action);
+            if(act == null)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"{action.Action.ToString()} was requested as a special action, but there was no handler for it.", false);
+            }
+
+            // Let the activation handle the player input.
+            act.PlayerAction(log, action, stateHelper);
+
+            // Validate things are good.
+            ThrowIfInvalidState(stateHelper);
+
+            // If the action was successful, remove it from our list.
+            stateHelper.GetState().CurrentTurnState.SpecialActions.Remove(0);
+        }
+
         #endregion
 
         #region Helpers
 
-        private List<BuildingActivationBase> EarnIncome(List<GameLog> log, StateHelper stateHelper)
+        private List<GameActionType> EarnIncome(List<GameLog> log, StateHelper stateHelper)
         {
             // Validate state.
             if(!stateHelper.CurrentTurn.HasCommittedToDiceResult())
@@ -587,6 +625,10 @@ namespace GameCore
             if(m_state.CurrentTurnState.Rolls == 0 || m_state.CurrentTurnState.DiceResults.Count == 0)
             {
                 throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when there were no dice results.", false);
+            }
+            if(m_state.CurrentTurnState.SpecialActions.Count != 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income can't be earned while there are pending special actions.", false);
             }
 
             // 
@@ -640,18 +682,18 @@ namespace GameCore
             //
             // Purple cards only execute on the active player's turn.
             // Purple cards may result in actions we need to ask the player about.
-            List<BuildingActivationBase> activations = ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Purple);
+            List<GameActionType> specialActions = ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Purple);
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
 
             // Return any activations
-            return activations;
+            return specialActions;
         }
 
-        private List<BuildingActivationBase> ExecuteBuildingColorIncomeForPlayer(List<GameLog> log, StateHelper stateHelper, int playerIndex, EstablishmentColor color)
+        private List<GameActionType> ExecuteBuildingColorIncomeForPlayer(List<GameLog> log, StateHelper stateHelper, int playerIndex, EstablishmentColor color)
         {
-            List<BuildingActivationBase> activations = new List<BuildingActivationBase>();
+            List<GameActionType> newSpecialActions = new List<GameActionType>();
 
             // Get the sum of the roll.
             int diceSum = 0;
@@ -678,12 +720,14 @@ namespace GameCore
                         for (int i = 0; i < built; i++)
                         {
                             // This building should activate.
-                            BuildingActivationBase activation = building.GetActivation().Activate(log, m_state, stateHelper, buildingIndex, playerIndex);
+                            BuildingActivationBase activation = building.GetActivation();
+                            activation.Activate(log, m_state, stateHelper, buildingIndex, playerIndex);
 
-                            // If an activation is returned, there are actions we need to ask the user to make.
-                            if(activation == null)
+                            // If the building has a special activation, we need to add it to the list so the player can resolve it.
+                            GameActionType? type = activation.GetAction();
+                            if (type.HasValue)
                             {
-                                activations.Add(activation);
+                                newSpecialActions.Add(type.Value);
                             }
                             ThrowIfInvalidState(stateHelper);
                         }
@@ -702,7 +746,7 @@ namespace GameCore
                     }
                 }
             }
-            return activations;
+            return newSpecialActions;
         }
 
         private void ThrowIfInvalidState(StateHelper stateHelper)

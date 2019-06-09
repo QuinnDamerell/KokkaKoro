@@ -144,7 +144,8 @@ namespace GameService.ServiceCore
             info.EnvironmentVariables[c_userNameKey] = m_userName;
             info.EnvironmentVariables[c_userPasscodeKey] = m_userPasscode;
             info.EnvironmentVariables[c_gameIdKey] = m_gameId.ToString();
-            info.EnvironmentVariables[c_localServiceAddress] = $"ws://{Utils.GetServiceLocalAddress()}";
+            string hostName = Utils.GetServiceLocalAddress() == null ? "wss://kokkakoro.azurewebsites.net" : $"ws://{Utils.GetServiceLocalAddress()}";
+            info.EnvironmentVariables[c_localServiceAddress] = hostName;
             if (!String.IsNullOrWhiteSpace(m_gamePassword))
             {
                 info.EnvironmentVariables[c_gamePasswordKey] = m_gamePassword;

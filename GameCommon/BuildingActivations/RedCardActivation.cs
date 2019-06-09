@@ -22,7 +22,7 @@ namespace GameCommon.BuildingActivations
             return m_amount;
         }
 
-        public override BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
+        public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
         {
             // Get common details and validate.
             (GamePlayer invokedPlayer, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "RedCard", buildingIndex, playerIndexInvokedOn);
@@ -48,8 +48,6 @@ namespace GameCommon.BuildingActivations
             // Log it
             log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.CoinPayment, $"{activePlayer.Name} paid {amountToTake} coins to {invokedPlayer.Name} for some yummy food from a {b.GetName()}",
                         new CoinPaymentDetials() { BuildingIndex = buildingIndex, Payment = amountToTake, PlayerIndexPaidTo = playerIndexInvokedOn, PlayerIndexTakenFrom = activePlayer.PlayerIndex }));                 
-
-            return null;
         }
 
         public override GameActionType? GetAction()

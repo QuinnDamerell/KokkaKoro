@@ -24,8 +24,8 @@ namespace GameCommon.Protocol
         TvStationPayout,
 
         // Tells the server the client has decided the player and building they want to swap due to a business center activation.
-        [EnumMember(Value = "BusinessCenterBuildingSwap")]
-        BusinessCenterBuildingSwap,
+        [EnumMember(Value = "BusinessCenterSwap")]
+        BusinessCenterSwap,
 
         // Tells the server the client wishes to end the turn.
         [EnumMember(Value = "EndTurn")]

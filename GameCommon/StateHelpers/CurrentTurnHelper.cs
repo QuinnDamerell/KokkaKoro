@@ -38,11 +38,11 @@ namespace GameCommon.StateHelpers
             {
                 return "The round number was smaller than 0";
             }
-            if(s.CurrentTurnState.Activations == null)
+            if(s.CurrentTurnState.SpecialActions == null)
             {
                 return "Current turn state activations is null";
             }
-            if (s.CurrentTurnState.Activations.Count > 0)
+            if (s.CurrentTurnState.SpecialActions.Count > 0)
             {
                 if(!s.CurrentTurnState.HasCommitedDiceResult)
                 {
@@ -56,9 +56,7 @@ namespace GameCommon.StateHelpers
                 {
                     return "There are activations but the turn has ended.";
                 }
-
             }
-
             return null;
         }
 
@@ -110,17 +108,22 @@ namespace GameCommon.StateHelpers
             return s.CurrentTurnState.HasGameStarted;
         }
 
+        public bool HasPendingSpecialActions()
+        {
+            GameState s = m_gameHelper.GetState();
+            return s.CurrentTurnState.SpecialActions.Count > 0;
+        }
+
         public List<GameActionType> GetPossibleActions()
         {
             List<GameActionType> actions = new List<GameActionType>();
             GameState s = m_gameHelper.GetState();
 
-            // If there are any pending activations on the current player, they should be resolved first.
-            // Always do the first action in the list. When it's resolved it will be removed and the next action will be done.
-            if(s.CurrentTurnState.Activations.Count > 0)
+            // If there are any special actions for the current player, they must be resolved first.
+            // If there are multiple, we need to resolve them in the order they are listed.
+            if(HasPendingSpecialActions())
             {
-                GameActionType? type = s.CurrentTurnState.Activations[0].GetAction();
-                actions.Add(type.Value);
+                actions.Add(s.CurrentTurnState.SpecialActions[0]);
                 return actions;
             }
 

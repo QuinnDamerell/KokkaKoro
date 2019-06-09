@@ -52,6 +52,10 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "InvalidStateToTakeAction")]
         InvalidStateToTakeAction,
 
+        // The requested action can't be done because there are pending special actions.
+        [EnumMember(Value = "PendingSpecialActivations")]
+        PendingSpecialActivations,
+
         // The game has already ended.
         [EnumMember(Value = "GameEnded")]
         GameEnded,

@@ -58,10 +58,9 @@ namespace GameCommon.BuildingActivations
 
         }
 
-        public override BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
+        public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
         {
-            // For this activation, we need a player decision, so we don't do anything on activation except return the object.
-            return this;
+            // For this activation we need player to give us input, so we don't do anything.
         }
     }
 }

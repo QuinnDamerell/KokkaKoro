@@ -7,7 +7,7 @@ namespace GameService.ServiceCore
 {
     public class Utils
     {
-        static string s_serviceLocalAddress = "";
+        static string s_serviceLocalAddress = null;
 
         public static bool IsRunningOnAzure()
         {

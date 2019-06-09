@@ -49,10 +49,10 @@ namespace KokkaKoro
 
         // Connects to the service. 
         // If local port is given, we will try to connect to the localhost port.
-        public async Task ConnectAsync(int? localPort = null)
+        public async Task ConnectAsync(string connectionAddress = null)
         {
             m_websocket = new KokkaKoroClientWebsocket(this, this, m_debugWebsocketMessages);
-            string url = localPort.HasValue ? $"ws://localhost:{localPort.Value}/ws" : $"wss://kokkakoro.azurewebsites.net/ws";
+            string url = $"{(connectionAddress == null ? "wss://kokkakoro.azurewebsites.net" : connectionAddress)}/ws";
             Info($"Connecting to {url}");
             await m_websocket.Connect(url);
         }

@@ -272,9 +272,9 @@ namespace GameService.ServiceCore
         {
             lock (m_gameLock)
             {
-                if (m_players.Count < 1)
+                if (m_players.Count < 2)
                 {
-                    return "There must be at least a player to start the game.";
+                    return "There must be at least two players to start the game.";
                 }
 
                 if (m_state != KokkaKoroGameState.Lobby)

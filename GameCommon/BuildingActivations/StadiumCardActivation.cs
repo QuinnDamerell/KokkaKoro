@@ -17,7 +17,7 @@ namespace GameCommon.BuildingActivations
             return m_amount;
         }
 
-        public override BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
+        public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
         {
             // Get common details and validate.
             (GamePlayer invokedPlayer, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "StadiumCard", buildingIndex, playerIndexInvokedOn);
@@ -50,8 +50,6 @@ namespace GameCommon.BuildingActivations
             // Log it
             log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.StadiumCollection, $"{invokedPlayer.Name} earned {m_amount} coins from all players (sum {totalTaken}) for a stadium action.",
                         new StadiumCollectionDetails() { TotalRecieved = totalTaken, PlayerIndexPaidTo = playerIndexInvokedOn, MaxTakenFromEachPlayer = m_amount }));                 
-
-            return null;
         }
 
         public override GameActionType? GetAction()

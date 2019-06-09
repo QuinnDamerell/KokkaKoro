@@ -15,9 +15,8 @@ namespace GameCommon.BuildingActivations
         // Called when the player makes an action for the activation.
         public abstract void PlayerAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper);
 
-        // Called to make the activation happen. If a BuildingActivationBase is returned, there are actions we need to request from the user
-        // to preform the action.
-        public abstract BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn);
+        // Called to make the activation happen.
+        public abstract void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn);
 
         // Gets some basic details for the activations.
         internal (GamePlayer, BuildingBase) GetDetailsAndValidate(GameState state, StateHelper stateHelper, string ActivationName, int buildingIndex, int playerIndexInvokedOn)
@@ -43,6 +42,28 @@ namespace GameCommon.BuildingActivations
             GamePlayer p = state.Players[playerIndexInvokedOn];
             BuildingBase b = stateHelper.BuildingRules[buildingIndex];
             return (p, b);
+        }
+
+        // Returns a building activation that matches a given action type.
+        // If none match, returns null;
+        public static BuildingActivationBase GetActivation(GameActionType type)
+        {
+            // This is a list of activations that have player actions.
+            List<BuildingActivationBase> activations = new List<BuildingActivationBase>()
+            {
+                new BusinessCenterCardActivation(),
+                new TvStationCardActivation()
+            };
+
+            foreach(BuildingActivationBase act in activations)
+            {
+                GameActionType? t = act.GetAction();
+                if(t == type)
+                {
+                    return act;
+                }
+            }
+            return null;
         }
     }
 }

@@ -46,5 +46,15 @@ namespace GameCommon.Protocol
         {
             return new GameAction<object>() { Action = GameActionType.EndTurn, Options = null };
         }
+
+        public static GameAction<object> CreateTvStationPayoutAction(int playerIndexToTakeFrom)
+        {
+            return new GameAction<object> { Action = GameActionType.TvStationPayout, Options = new TvStationPayoutOptions() { PlayerIndexToTakeFrom = playerIndexToTakeFrom } };
+        }
+
+        public static GameAction<object> CreateBusinessCenterSwapAction(int playerIndexToSwapWith, int bulidingIndexToGive, int buildingIndexToTake, bool skipAction = false)
+        {
+            return new GameAction<object> { Action = GameActionType.TvStationPayout, Options = new BusinessCenterSwapOptions() { PlayrIndexToSwapWith = playerIndexToSwapWith, BuildingIndexToGive = bulidingIndexToGive, BuildingIndexToTake = buildingIndexToTake, SkipAction = skipAction} };
+        }
     }
 }
