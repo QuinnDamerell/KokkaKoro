@@ -17,25 +17,15 @@ namespace GameService
         public static void Main(string[] args)
         {
             var host = CreateWebHostBuilder(args).Build();
-
-            // Find the ports and IPs it bound to.
-            foreach (var address in host.ServerFeatures.Get<IServerAddressesFeature>().Addresses)
-            {
-                string fixedAddr = address.Replace("http://", "");
-                if(fixedAddr.EndsWith("/"))
-                {
-                    fixedAddr = fixedAddr.Substring(0, fixedAddr.Length - 1);
-                }
-                Logger.Info($"Server bound to {fixedAddr}");
-                Utils.SetServiceLocalAddress(fixedAddr);
-            }
-            
-            // And run the server.
             host.Run();
         }
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .ConfigureLogging(loggingBuilder =>
+                {
+                    loggingBuilder.AddAzureWebAppDiagnostics();
+                })
                 .UseStartup<Startup>();
     }
 }

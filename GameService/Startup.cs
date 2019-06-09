@@ -7,6 +7,7 @@ using GameService.ServiceCore;
 using GameService.WebsocketsHelpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +56,21 @@ namespace GameService
             app.UseWebSockets();
 
             app.UseMvc();
+
+  
+                // Find the ports and IPs it bound to.
+                var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
+                foreach (var address in serverAddressesFeature.Addresses)
+                {
+                    string fixedAddr = address.Replace("http://", "");
+                    if (fixedAddr.EndsWith("/"))
+                    {
+                        fixedAddr = fixedAddr.Substring(0, fixedAddr.Length - 1);
+                    }
+                    Logger.Info($"Server bound to {fixedAddr}");
+                    Utils.SetServiceLocalAddress(fixedAddr);
+                }
+
 
             // This code handles websockets coming into the system.
             app.Use(async (context, next) =>

@@ -119,7 +119,8 @@ namespace GameCommon.StateHelpers
             // Always do the first action in the list. When it's resolved it will be removed and the next action will be done.
             if(s.CurrentTurnState.Activations.Count > 0)
             {
-                actions.Add(s.CurrentTurnState.Activations[0].GetAction());
+                GameActionType? type = s.CurrentTurnState.Activations[0].GetAction();
+                actions.Add(type.Value);
                 return actions;
             }
 

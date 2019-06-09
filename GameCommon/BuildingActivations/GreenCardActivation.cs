@@ -83,5 +83,15 @@ namespace GameCommon.BuildingActivations
 
             return null;
         }
+
+        public override GameActionType? GetAction()
+        {
+            return null;
+        }
+
+        public override void PlayerAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
+        {
+            throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false);
+        }
     }
 }

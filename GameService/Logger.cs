@@ -10,11 +10,13 @@ namespace GameService.ServiceCore
         public static void Info(string msg)
         {
             Console.WriteLine(msg);
+            System.Diagnostics.Trace.TraceInformation(msg);
         }
 
         public static void Error(string msg, Exception e = null)
         {
             Console.WriteLine($"{msg} - {(e == null ? "" : e.Message)}");
+            System.Diagnostics.Trace.TraceError(msg);
         }
     }
 }
