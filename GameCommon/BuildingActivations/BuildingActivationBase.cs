@@ -9,7 +9,11 @@ namespace GameCommon.BuildingActivations
 {
     public abstract class BuildingActivationBase
     {
-        // Called th make the activation happen.
+        // Gets the action the player needs to decide upon to finish the activation.
+        public abstract GameActionType GetAction();
+
+        // Called to make the activation happen. If a BuildingActivationBase is returned, there are actions we need to request from the user
+        // to preform the action.
         public abstract BuildingActivationBase Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn);
 
         // Gets some basic details for the activations.

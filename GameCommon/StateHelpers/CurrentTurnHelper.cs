@@ -1,4 +1,5 @@
-﻿using GameCommon.Protocol;
+﻿using GameCommon.BuildingActivations;
+using GameCommon.Protocol;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -37,6 +38,27 @@ namespace GameCommon.StateHelpers
             {
                 return "The round number was smaller than 0";
             }
+            if(s.CurrentTurnState.Activations == null)
+            {
+                return "Current turn state activations is null";
+            }
+            if (s.CurrentTurnState.Activations.Count > 0)
+            {
+                if(!s.CurrentTurnState.HasCommitedDiceResult)
+                {
+                    return "There are activation but the dice result hasn't been committed.";
+                }
+                if(s.CurrentTurnState.HasBougthBuilding)
+                {
+                    return "There are activations but a building has also been built.";
+                }
+                if(s.CurrentTurnState.HasEndedTurn)
+                {
+                    return "There are activations but the turn has ended.";
+                }
+
+            }
+
             return null;
         }
 
@@ -92,6 +114,14 @@ namespace GameCommon.StateHelpers
         {
             List<GameActionType> actions = new List<GameActionType>();
             GameState s = m_gameHelper.GetState();
+
+            // If there are any pending activations on the current player, they should be resolved first.
+            // Always do the first action in the list. When it's resolved it will be removed and the next action will be done.
+            if(s.CurrentTurnState.Activations.Count > 0)
+            {
+                actions.Add(s.CurrentTurnState.Activations[0].GetAction());
+                return actions;
+            }
 
             // First of all, we have to get a dice roll.
             if(!HasCommittedToDiceResult())

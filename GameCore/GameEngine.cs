@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using GameCommon;
+using GameCommon.BuildingActivations;
 using GameCommon.Buildings;
 using GameCommon.Protocol;
 using GameCommon.Protocol.ActionOptions;
@@ -449,6 +450,10 @@ namespace GameCore
             {
                 throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't commit the results.", true);
             }
+            if(m_state.CurrentTurnState.Activations == null || m_state.CurrentTurnState.Activations.Count != 0)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has pending activations that need to be resolved.", true);
+            }
 
             // Commit the dice result.
             m_state.CurrentTurnState.HasCommitedDiceResult = true;
@@ -473,8 +478,8 @@ namespace GameCore
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
 
-            // Let the earn income logic run
-            EarnIncome(log, stateHelper); 
+            // Let the earn income logic run. If there are activations returned, there are actions the player needs to decided on.
+            m_state.CurrentTurnState.Activations = EarnIncome(log, stateHelper); 
         }
 
         private void HandleBuildAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
@@ -572,7 +577,7 @@ namespace GameCore
 
         #region Helpers
 
-        private void EarnIncome(List<GameLog> log, StateHelper stateHelper)
+        private List<BuildingActivationBase> EarnIncome(List<GameLog> log, StateHelper stateHelper)
         {
             // Validate state.
             if(!stateHelper.CurrentTurn.HasCommittedToDiceResult())
@@ -635,14 +640,19 @@ namespace GameCore
             //
             // Purple cards only execute on the active player's turn.
             // Purple cards may result in actions we need to ask the player about.
-            ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Purple);
+            List<BuildingActivationBase> activations = ExecuteBuildingColorIncomeForPlayer(log, stateHelper, m_state.CurrentTurnState.PlayerIndex, EstablishmentColor.Purple);
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
+
+            // Return any activations
+            return activations;
         }
 
-        private void ExecuteBuildingColorIncomeForPlayer(List<GameLog> log, StateHelper stateHelper, int playerIndex, EstablishmentColor color)
+        private List<BuildingActivationBase> ExecuteBuildingColorIncomeForPlayer(List<GameLog> log, StateHelper stateHelper, int playerIndex, EstablishmentColor color)
         {
+            List<BuildingActivationBase> activations = new List<BuildingActivationBase>();
+
             // Get the sum of the roll.
             int diceSum = 0;
             foreach (int r in m_state.CurrentTurnState.DiceResults)
@@ -668,7 +678,13 @@ namespace GameCore
                         for (int i = 0; i < built; i++)
                         {
                             // This building should activate.
-                            building.GetActivation().Activate(log, m_state, stateHelper, buildingIndex, playerIndex);
+                            BuildingActivationBase activation = building.GetActivation().Activate(log, m_state, stateHelper, buildingIndex, playerIndex);
+
+                            // If an activation is returned, there are actions we need to ask the user to make.
+                            if(activation == null)
+                            {
+                                activations.Add(activation);
+                            }
                             ThrowIfInvalidState(stateHelper);
                         }
 
@@ -685,7 +701,8 @@ namespace GameCore
                         }
                     }
                 }
-            }            
+            }
+            return activations;
         }
 
         private void ThrowIfInvalidState(StateHelper stateHelper)
