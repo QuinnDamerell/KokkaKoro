@@ -87,7 +87,7 @@ namespace GameCommon.Buildings
         }
 
         // Returns the building index in the BuildingRules for this Building.
-        public int GetBuldingIndex()
+        public int GetBuildingIndex()
         {
             return m_buildingIndex;
         }

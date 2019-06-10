@@ -51,7 +51,7 @@ namespace GameCommon.BuildingActivations
             // Validate player.
             if(activePlayer.PlayerIndex == sacrificePlayer.PlayerIndex)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply.", true);
+                throw GameError.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply this action to yourself.", true);
             }
 
             // Get how many we can take, up to the max.

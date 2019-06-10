@@ -30,15 +30,7 @@ namespace GameCommon.BuildingActivations
             // We need to take the coins from the active player and give them to the invoked player. 
             // We will take a max of the owed amount, but if there aren't enough the invoked player doesn't get the difference.
             GamePlayer activePlayer = state.Players[state.CurrentTurnState.PlayerIndex];
-            int amountToTake = 0;
-            if (activePlayer.Coins >= m_amount)
-            {
-                amountToTake = m_amount;
-            }
-            else
-            {
-                amountToTake = activePlayer.Coins;
-            }
+            int amountToTake = stateHelper.Player.GetMaxTakeableCoins(m_amount, activePlayer.PlayerIndex);
 
             // Take the coins from the active player
             activePlayer.Coins -= amountToTake;

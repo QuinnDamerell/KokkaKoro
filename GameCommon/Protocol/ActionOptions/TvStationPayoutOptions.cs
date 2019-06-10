@@ -10,6 +10,6 @@ namespace GameCommon.Protocol.ActionOptions
     public class TvStationPayoutOptions
     {
         // Indicates which player you wish to take the payout from.
-        public int PlayerIndexToTakeFrom;
+        public int PlayerIndexToTakeFrom = -1;
     }
 }

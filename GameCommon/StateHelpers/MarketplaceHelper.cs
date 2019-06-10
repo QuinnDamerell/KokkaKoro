@@ -43,7 +43,7 @@ namespace GameCommon.StateHelpers
             }
             for(int i = 0; i < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); i++)
             {
-                if(m_gameHelper.BuildingRules[i].GetBuldingIndex() != i)
+                if(m_gameHelper.BuildingRules[i].GetBuildingIndex() != i)
                 {
                     return $"Building rules index {i} has an incorrect GetBuldingIndex()";
                 }

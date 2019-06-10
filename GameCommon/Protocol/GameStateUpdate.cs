@@ -31,7 +31,13 @@ namespace GameCommon.Protocol
         CoinPayment,
 
         [EnumMember(Value = "StadiumCollection")]
-        StadiumCollection,        
+        StadiumCollection,
+
+        [EnumMember(Value = "BusinessCenterSwap")]
+        BusinessCenterSwap,
+
+        [EnumMember(Value = "ActionSkip")]
+        ActionSkip,
 
         [EnumMember(Value = "EndTurn")]
         EndTurn,

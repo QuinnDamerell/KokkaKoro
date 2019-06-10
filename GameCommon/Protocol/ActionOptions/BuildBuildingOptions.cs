@@ -10,7 +10,7 @@ namespace GameCommon.Protocol.ActionOptions
     public class BuildBuildingOptions
     {
         // Indicates the building index to build built.
-        public int BuildingIndex;
+        public int BuildingIndex = -1;
 
         // Since this is the last action a user can take, if this
         // flag is set the players turn will be ended. If not, the player
