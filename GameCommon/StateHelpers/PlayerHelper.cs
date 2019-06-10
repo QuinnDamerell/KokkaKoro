@@ -312,6 +312,19 @@ namespace GameCommon.StateHelpers
             return true;
         }
 
+        public int GetMaxTakeableCoins(int desiredAmount, int? playerIndex = null)
+        {
+            // Get the player
+            GamePlayer p = GetPlayerFromIndex(playerIndex);
+            if (p == null)
+            {
+                return -1;
+            }
+
+            // Return the desired amount or however many coins they have.
+            return Math.Min(desiredAmount, p.Coins);
+        }
+
         public bool CanBuildBuilding(int buildingIndex, string userName = null)
         {
             // Check if we can afford it.

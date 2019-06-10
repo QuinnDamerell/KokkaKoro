@@ -56,6 +56,10 @@ namespace GameCommon.Protocol
         [EnumMember(Value = "PendingSpecialActivations")]
         PendingSpecialActivations,
 
+        // The requested action can't be applied to yourself.
+        [EnumMember(Value = "ActionCantBeTakenOnSelf")]
+        ActionCantBeTakenOnSelf,
+
         // The game has already ended.
         [EnumMember(Value = "GameEnded")]
         GameEnded,

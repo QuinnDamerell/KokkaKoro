@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Text;
 using GameCommon.Buildings;
 using GameCommon.Protocol;
+using GameCommon.Protocol.ActionOptions;
 using GameCommon.Protocol.GameUpdateDetails;
 using GameCommon.StateHelpers;
+using Newtonsoft.Json.Linq;
 
 namespace GameCommon.BuildingActivations
 {
     public class TvStationCardActivation : BuildingActivationBase
     {
-        int m_amount = 2;
+        int m_amount = 5;
 
         public int GetAmount()
         {
@@ -24,38 +26,44 @@ namespace GameCommon.BuildingActivations
 
         public override void PlayerAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
-            //// Get common details and validate.
-            //(GamePlayer invokedPlayer, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "StadiumCard", buildingIndex, playerIndexInvokedOn);
+            // Try to get the options
+            TvStationPayoutOptions options = null;
+            try
+            {
+                if (action.Options is JObject obj)
+                {
+                    options = obj.ToObject<TvStationPayoutOptions>();
+                }
+            }
+            catch (Exception e)
+            {
+                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Failed to parse tv station options: {e.Message}", true);
+            }
+            if (!stateHelper.Player.ValidatePlayerIndex(options.PlayerIndexToTakeFrom))
+            {
+                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid player index sent in options.", true);
+            }
 
-            //// We need to take a max of 2 coins from every player but ourselves. If the player doesn't have 2 coins, take as many as they have.
-            //int totalTaken = 0;
-            //foreach(GamePlayer p in state.Players)
-            //{
-            //    // Don't take coins from ourselves.
-            //    if(p.PlayerIndex == invokedPlayer.PlayerIndex)
-            //    {
-            //        continue;
-            //    }
-            //    int amountTaken = 0;
-            //    if (p.Coins >= m_amount)
-            //    {
-            //        amountTaken = m_amount;
-            //    }
-            //    else
-            //    {
-            //        amountTaken = p.Coins;
-            //    }
-            //    p.Coins -= amountTaken;
-            //    totalTaken += amountTaken;
-            //}
+            // Get players
+            GamePlayer activePlayer = stateHelper.Player.GetPlayer();
+            GamePlayer sacrificePlayer = stateHelper.Player.GetPlayerFromIndex(options.PlayerIndexToTakeFrom);
 
-            //// Give them to the invoked player
-            //invokedPlayer.Coins += totalTaken;
+            // Validate player.
+            if(activePlayer.PlayerIndex == sacrificePlayer.PlayerIndex)
+            {
+                throw GameError.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply.", true);
+            }
 
-            //// Log it
-            //log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.StadiumCollection, $"{invokedPlayer.Name} earned {m_amount} coins from all players (sum {totalTaken}) for a stadium action.",
-            //            new StadiumCollectionDetails() { TotalRecieved = totalTaken, PlayerIndexPaidTo = playerIndexInvokedOn, MaxTakenFromEachPlayer = m_amount }));                 
+            // Get how many we can take, up to the max.
+            int takeable = stateHelper.Player.GetMaxTakeableCoins(m_amount, sacrificePlayer.PlayerIndex);
 
+            // Transfer the coins
+            sacrificePlayer.Coins -= takeable;
+            activePlayer.Coins += takeable;
+
+            // Log the transaction.
+            log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.CoinPayment, $"{sacrificePlayer.Name} was chosen to pay {activePlayer.Name} {takeable} coins for the TV Station.",
+                        new CoinPaymentDetials() { BuildingIndex = BuildingRules.TvStation, Payment = takeable, PlayerIndexPaidTo = activePlayer.PlayerIndex, PlayerIndexTakenFrom = sacrificePlayer.PlayerIndex }));
         }
 
         public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)

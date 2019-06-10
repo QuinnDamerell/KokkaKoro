@@ -74,7 +74,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         public override BuildingActivationBase GetActivation()
         {
-            return new GreenCardActivation(EstablishmentProduction.Cattle, 0);
+            return new BusinessCenterCardActivation();
         }
     }
 }

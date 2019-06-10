@@ -54,7 +54,7 @@ namespace GameCommon.Protocol
 
         public static GameAction<object> CreateBusinessCenterSwapAction(int playerIndexToSwapWith, int bulidingIndexToGive, int buildingIndexToTake, bool skipAction = false)
         {
-            return new GameAction<object> { Action = GameActionType.TvStationPayout, Options = new BusinessCenterSwapOptions() { PlayrIndexToSwapWith = playerIndexToSwapWith, BuildingIndexToGive = bulidingIndexToGive, BuildingIndexToTake = buildingIndexToTake, SkipAction = skipAction} };
+            return new GameAction<object> { Action = GameActionType.BusinessCenterSwap, Options = new BusinessCenterSwapOptions() { PlayrIndexToSwapWith = playerIndexToSwapWith, BuildingIndexToGive = bulidingIndexToGive, BuildingIndexToTake = buildingIndexToTake, SkipAction = skipAction} };
         }
     }
 }

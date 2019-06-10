@@ -608,7 +608,7 @@ namespace GameCore
             ThrowIfInvalidState(stateHelper);
 
             // If the action was successful, remove it from our list.
-            stateHelper.GetState().CurrentTurnState.SpecialActions.Remove(0);
+            stateHelper.GetState().CurrentTurnState.SpecialActions.RemoveAt(0);
         }
 
         #endregion
