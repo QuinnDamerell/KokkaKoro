@@ -9,6 +9,7 @@ namespace GameCommon.Protocol
 {
     public enum ErrorTypes
     {
+        // Who knows.
         [EnumMember(Value = "Unknown")]
         Unknown,
 
@@ -66,16 +67,16 @@ namespace GameCommon.Protocol
 
     }
 
-    public class GameError : Exception
+    public class GameError
     {
         // The type of error. This can help the client respond to it better.
         [JsonConverter(typeof(StringEnumConverter))]
         public ErrorTypes Type;
 
         // A string that describes the error
-        new public string Message;
+        public string Message;
 
-        // Whatever invoked the engine to produce this error, should it try again?
+        // Can the player who invoked this error try again?
         public bool CanTryAgain;
 
         // The current state of the game.

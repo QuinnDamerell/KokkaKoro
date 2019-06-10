@@ -21,8 +21,8 @@ namespace GameCommon.Protocol.GameUpdateDetails
         [EnumMember(Value = "RoundLimitHit")]
         RoundLimitReached,
 
-        [EnumMember(Value = "Error")]
-        Error
+        [EnumMember(Value = "GameEngineError")]
+        GameEngineError
     }
 
     public class GameEndDetails

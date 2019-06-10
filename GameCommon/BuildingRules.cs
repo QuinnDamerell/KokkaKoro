@@ -32,7 +32,7 @@ namespace GameCommon
         public readonly static int RadioTower = 17;
         public readonly static int AmusementPark = 18;
 
-        List<BuildingBase> m_bulidings = new List<BuildingBase>();
+        readonly List<BuildingBase> m_bulidings = new List<BuildingBase>();
 
         public BuildingRules(GameMode mode)
         {
@@ -59,6 +59,11 @@ namespace GameCommon
             m_bulidings.Add(new AmusementPark(18));
         }
 
+        /// <summary>
+        /// Gets a building base.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public BuildingBase Get(int buildingIndex)
         {
             return m_bulidings[buildingIndex];
@@ -69,6 +74,10 @@ namespace GameCommon
             get { return Get(i); }
         }
 
+        /// <summary>
+        /// Returns the number of unique building types in the game.
+        /// </summary>
+        /// <returns></returns>
         public int GetCountOfUniqueTypes()
         {
             return m_bulidings.Count;

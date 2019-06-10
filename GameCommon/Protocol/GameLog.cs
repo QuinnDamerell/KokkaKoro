@@ -23,7 +23,7 @@ namespace GameCommon.Protocol
         // Not null if this log entry is due to an error.
         public GameError Error;
 
-        //<
+        //
         // Helpers
         // 
         public static GameLog CreateGameStateUpdate<T>(GameState state, StateUpdateType type, string message, T details)

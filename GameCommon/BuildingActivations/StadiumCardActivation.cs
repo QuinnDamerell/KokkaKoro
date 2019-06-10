@@ -10,7 +10,7 @@ namespace GameCommon.BuildingActivations
 {
     public class StadiumCardActivation : BuildingActivationBase
     {
-        int m_amount = 2;
+        readonly int m_amount = 2;
 
         public int GetAmount()
         {
@@ -20,7 +20,7 @@ namespace GameCommon.BuildingActivations
         public override void Activate(List<GameLog> log, GameState state, StateHelper stateHelper, int buildingIndex, int playerIndexInvokedOn)
         {
             // Get common details and validate.
-            (GamePlayer invokedPlayer, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "StadiumCard", buildingIndex, playerIndexInvokedOn);
+            (GamePlayer invokedPlayer, BuildingBase _) = GetDetailsAndValidate(state, stateHelper, "StadiumCard", buildingIndex, playerIndexInvokedOn);
 
             // We need to take a max of 2 coins from every player but ourselves. If the player doesn't have 2 coins, take as many as they have.
             int totalTaken = 0;
@@ -31,17 +31,13 @@ namespace GameCommon.BuildingActivations
                 {
                     continue;
                 }
-                int amountTaken = 0;
-                if (p.Coins >= m_amount)
-                {
-                    amountTaken = m_amount;
-                }
-                else
-                {
-                    amountTaken = p.Coins;
-                }
-                p.Coins -= amountTaken;
-                totalTaken += amountTaken;
+
+                // Get how many coins we can take.
+                int amountToTake = stateHelper.Player.GetMaxTakeableCoins(m_amount, p.PlayerIndex);
+
+                // Take them.
+                p.Coins -= amountToTake;
+                totalTaken += amountToTake;
             }
 
             // Give them to the invoked player
@@ -59,7 +55,7 @@ namespace GameCommon.BuildingActivations
 
         public override void PlayerAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
-            throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false);
+            throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false, true);
         }
     }
 }

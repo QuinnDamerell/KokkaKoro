@@ -15,38 +15,61 @@ namespace GameCommon
 
     public class TurnState
     {
-        // The index into the Players list of the current player.
+        /// <summary>
+        /// The index into the Players list of the current player.
+        /// </summary>
         public int PlayerIndex;
 
-        // How many rolls the current user has preformed.
+        /// <summary>
+        /// How many rolls the current user has preformed.
+        /// </summary>
         public int Rolls;
 
-        // The results of the dice that have been rolled, assuming they have been rolled.
+        /// <summary>
+        /// The results of the dice that have been rolled, assuming they have been rolled.
+        /// </summary>
         public List<int> DiceResults = new List<int>();
 
-        // If anything in this list exits, there are special actions the player must resolved.
-        // The actions MUST BE RESOLVED BEFORE ANY OTHER TURN ACTIONS TAKE PLACE.
-        // The actions MUST BE RESOLVED IN THE LIST ORDER.
+        /// <summary>
+        /// If anything in this list exits, there are special actions the player must resolved.
+        /// The actions MUST BE RESOLVED BEFORE ANY OTHER TURN ACTIONS TAKE PLACE.
+        /// The actions MUST BE RESOLVED IN THE LIST ORDER.
+        /// </summary>
         public List<GameActionType> SpecialActions = new List<GameActionType>();
 
-        // Indicates if the player has committed to the dice result.
+        /// <summary>
+        /// Indicates if the player has committed to the dice result.
+        /// </summary>
         public bool HasCommitedDiceResult;
 
-        // Indicates if the player has bought a building on this turn or not.
+        /// <summary>
+        /// Indicates if the player has bought a building on this turn or not.
+        /// </summary>
         public bool HasBougthBuilding;
 
-        // Indicates if the player has ended this turn.
+        /// <summary>
+        /// Indicates if the player has ended this turn.
+        /// </summary>
         public bool HasEndedTurn;
 
-        // Indicates which round of the game we are on.
+        /// <summary>
+        /// Indicates which round of the game we are on.
+        /// </summary>
         public int RoundNumber;
 
-        // Indicates if the game has ended.
+        /// <summary>
+        /// Indicates if the game has ended.
+        /// </summary>
         public bool HasGameEnded = false;
 
-        // Indicates if the game has started.
+        /// <summary>
+        /// Indicates if the game has started.
+        /// </summary>
         public bool HasGameStarted = false;
 
+        // 
+        // Helpers
+        //
         public TurnState()
         {
             RoundNumber = 0;
@@ -67,33 +90,44 @@ namespace GameCommon
 
     public class GameState
     {
-        // This is the game version the local client is running.
-        // The game version will be updated whenever there are breaking changes to the cards or rules.
+        /// <summary>
+        /// This is the game version the local client is running.
+        /// The game version will be updated whenever there are breaking changes to the cards or rules.
+        /// </summary>
         [JsonIgnore]
         public static int GameVersion = 1;
 
-        // This is the version of the game the remote sever is running.
+        /// <summary>
+        /// This is the version of the game the remote sever is running.
+        /// </summary>
         public int RemoteGameVersion = GameVersion;
 
-        // The game mode being played.
+        /// <summary>
+        /// The game mode being played.
+        /// </summary>
         public GameMode Mode;
 
-        // A list of players in the game.
-        // The players are ordered by turn order.
+        /// <summary>
+        /// A list of players in the game.
+        /// The players are ordered by turn order.
+        /// </summary>
         public List<GamePlayer> Players = new List<GamePlayer>();
 
-        // The current state of the current player's turn.
+        /// <summary>
+        /// The current state of the current player's turn.
+        /// </summary>
         public TurnState CurrentTurnState = new TurnState();
 
-        // The market is the set of cards that are currently available for purchase.
+        /// <summary>
+        /// The market is the set of cards that are currently available for purchase.
+        /// </summary>
         public Marketplace Market;
 
-        //
-        // Helpers
-        //
-
-        // Returns a state helper where questions are answered from the perspective of the given
-        // username.
+        /// <summary>
+        /// Returns a state helper where questions are answered from the perspective of the given username.
+        /// </summary>
+        /// <param name="perspectiveUserName"></param>
+        /// <returns></returns>
         public StateHelper GetStateHelper(string perspectiveUserName)
         {
             return new StateHelper(this, perspectiveUserName);

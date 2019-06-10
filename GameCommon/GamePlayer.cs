@@ -4,22 +4,35 @@ using System.Text;
 
 namespace GameCommon
 {
+    /// <summary>
+    /// Represents a player in the game.
+    /// </summary>
     public class GamePlayer
     {
-        // The player index for this player, just for reference.
+        /// <summary>
+        /// The player index for this player, just for reference.
+        /// </summary>
         public int PlayerIndex;
 
-        // A friendly name for the player
+        /// <summary>
+        /// A friendly name for the player
+        /// </summary>
         public string Name;
 
-        // The service username of the player.
+        /// <summary>
+        /// The service username of the player.
+        /// </summary>
         public string UserName;
 
-        // The current amount of coins they have.
+        /// <summary>
+        /// The current amount of coins they have.
+        /// </summary>
         public int Coins;
 
-        // A list of building owned by the player. The index into the list
-        // is the building number and the value is the number owned.
+        /// <summary>
+        /// A list of building owned by the player. The index into the list
+        /// is the building number and the value is the number owned.
+        /// </summary>
         public List<int> OwnedBuildings = new List<int>();
     }
 }

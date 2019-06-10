@@ -11,6 +11,9 @@ namespace GameCommon
         int RandomInt(int minInclusive, int maxInclusive);
     }
 
+    /// <summary>
+    /// A good source of random ints.
+    /// </summary>
     public class RandomGenerator : IRandomGenerator
     {
         readonly RNGCryptoServiceProvider m_random = new RNGCryptoServiceProvider();

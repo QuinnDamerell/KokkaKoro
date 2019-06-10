@@ -10,7 +10,7 @@ namespace GameCommon.BuildingActivations
 {
     public class RedCardActivation : BuildingActivationBase
     {
-        int m_amount;
+        readonly int m_amount;
 
         public RedCardActivation(int amount)
         {
@@ -49,7 +49,7 @@ namespace GameCommon.BuildingActivations
 
         public override void PlayerAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
-            throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false);
+            throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false, true);
         }
     }
 }

@@ -7,10 +7,14 @@ namespace GameCommon
 {
     public class Marketplace
     {
-        // The max amount of building in the market. (for now 100 will put them all in there)
+        /// <summary>
+        /// The max amount of building in the market. (for now 100 will put them all in there)
+        /// </summary>
         public int MaxBuldingTypes = 100;
 
-        // A list of buildings where the index is the building type and the value in the list is the quantity available.
+        /// <summary>
+        /// A list of buildings where the index is the building type and the value in the list is the quantity available.
+        /// </summary>
         public List<int> AvailableBuildable = new List<int>();
 
         //

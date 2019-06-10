@@ -13,10 +13,10 @@ namespace GameService.ServiceCore
 
         // For hosted bots, this is a GUID we make that we will give to the bot for them to connect with.
         // For remote players, this is the actual username.
-        string m_userName;
+        readonly string m_userName;
 
         // Bot only stuff.
-        ServiceBot m_bot = null;
+        readonly ServiceBot m_bot = null;
         string m_inGameName;
 
         // Bot constructor
@@ -79,12 +79,17 @@ namespace GameService.ServiceCore
 
         public string GetBotName()
         {
-            return m_bot == null ? null : m_bot.GetBotName();
+            return m_bot?.GetBotName();
         }
 
         public string GetInGameName()
         {
             return m_inGameName;
+        }
+
+        public void SetInGameName(string name)
+        {
+            m_inGameName = name;
         }
 
         public string GetUserName()
@@ -126,7 +131,7 @@ namespace GameService.ServiceCore
                 IsBot = IsBot(),
                 PlayerName = m_userName,
                 IsReady = (IsBot() ? m_bot.IsReady() : true),
-                BotDetails = (IsBot() ? m_bot.GetBotPlayerDetails() : null               
+                BotDetails = (IsBot() ? m_bot.GetBotPlayerDetails() : null)               
             };
         }
     }

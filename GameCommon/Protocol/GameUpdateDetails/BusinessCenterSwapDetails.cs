@@ -5,6 +5,7 @@ using System.Text;
 
 namespace GameCommon.Protocol.GameUpdateDetails
 {
+    // Indicates that a business center was invoked and there was a swap done.
     public class BusinessCenterSwapDetails
     {
         // The player indexes who got buildings messed with.

@@ -30,7 +30,7 @@ namespace GameCommon.BuildingActivations
             }
             catch (Exception e)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Failed to parse business center options: {e.Message}", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Failed to parse business center options: {e.Message}", true);
             }
 
             // If the player decided to skip the swap, let them.
@@ -45,11 +45,11 @@ namespace GameCommon.BuildingActivations
 
             if (!stateHelper.Player.ValidatePlayerIndex(options.PlayerIndexToSwapWith))
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid player index sent in options.", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid player index sent in options.", true);
             }
             if (!stateHelper.Marketplace.ValidateBuildingIndex(options.BuildingIndexToGive) || !stateHelper.Marketplace.ValidateBuildingIndex(options.BuildingIndexToTake))
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid business index sent in options.", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid business index sent in options.", true);
             }
 
             // Get the swap player.
@@ -58,7 +58,7 @@ namespace GameCommon.BuildingActivations
             // Validate.
             if (activePlayer.PlayerIndex == sacrificePlayer.PlayerIndex)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply this action to yourself.", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply this action to yourself.", true);
             }
 
             // Get the building and validate.
@@ -67,15 +67,15 @@ namespace GameCommon.BuildingActivations
             if (take.GetEstablishmentColor() == EstablishmentColor.Landmark || take.GetEstablishmentColor() == EstablishmentColor.Purple
                 || give.GetEstablishmentColor() == EstablishmentColor.Landmark || give.GetEstablishmentColor() == EstablishmentColor.Purple)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"One of the selected buildings was a purple or landmark.", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"One of the selected buildings was a purple or landmark.", true);
             }
             if (activePlayer.OwnedBuildings[give.GetBuildingIndex()] == 0)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"You don't own a building of type {give.GetName()} to give!", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"You don't own a building of type {give.GetName()} to give!", true);
             }
             if(sacrificePlayer.OwnedBuildings[take.GetBuildingIndex()] == 0)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"The player {sacrificePlayer.Name} doesn't own the building you want to take. ({take.GetName()})", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"The player {sacrificePlayer.Name} doesn't own the building you want to take. ({take.GetName()})", true);
             }
 
             // Do the swap.

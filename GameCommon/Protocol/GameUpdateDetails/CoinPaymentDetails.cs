@@ -5,6 +5,7 @@ using System.Text;
 
 namespace GameCommon.Protocol.GameUpdateDetails
 {
+    // Indicates that a coin payment was done.
     public class CoinPaymentDetials
     {
         // The player index of who paid the coins.

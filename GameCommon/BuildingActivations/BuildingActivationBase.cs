@@ -23,19 +23,19 @@ namespace GameCommon.BuildingActivations
         {
             if(state == null)
             {
-                throw GameError.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with a null state!", false);
+                throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with a null state!", false, true);
             }
             if (stateHelper == null)
             {
-                throw GameError.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with a null state helper!", false);
+                throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with a null state helper!", false, true);
             }
             if (!stateHelper.Player.ValidatePlayerIndex(playerIndexInvokedOn))
             {
-                throw GameError.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with an invalid playerIndex {playerIndexInvokedOn}", false);
+                throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with an invalid playerIndex {playerIndexInvokedOn}", false, true);
             }
             if (!stateHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
             {
-                throw GameError.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with an invalid buildilngIndex {buildingIndex}", false);
+                throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"{ActivationName} was invoked with an invalid buildilngIndex {buildingIndex}", false, true);
             }
 
             // Apply the coin amount to the player this card was invoked on.

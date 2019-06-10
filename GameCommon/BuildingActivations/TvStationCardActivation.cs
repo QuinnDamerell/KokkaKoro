@@ -12,7 +12,7 @@ namespace GameCommon.BuildingActivations
 {
     public class TvStationCardActivation : BuildingActivationBase
     {
-        int m_amount = 5;
+        readonly int m_amount = 5;
 
         public int GetAmount()
         {
@@ -37,11 +37,11 @@ namespace GameCommon.BuildingActivations
             }
             catch (Exception e)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Failed to parse tv station options: {e.Message}", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Failed to parse tv station options: {e.Message}", true);
             }
             if (!stateHelper.Player.ValidatePlayerIndex(options.PlayerIndexToTakeFrom))
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid player index sent in options.", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidActionOptions, $"Invalid player index sent in options.", true);
             }
 
             // Get players
@@ -51,7 +51,7 @@ namespace GameCommon.BuildingActivations
             // Validate player.
             if(activePlayer.PlayerIndex == sacrificePlayer.PlayerIndex)
             {
-                throw GameError.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply this action to yourself.", true);
+                throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.ActionCantBeTakenOnSelf, $"You can't apply this action to yourself.", true);
             }
 
             // Get how many we can take, up to the max.

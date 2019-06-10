@@ -24,16 +24,16 @@ namespace GameCore
         GameState m_state;
 
         // Keeps track of the game log.
-        LogKeeper m_logKeeper;
+        readonly LogKeeper m_logKeeper;
 
         // Gives us random numbers
-        RandomGenerator m_random = new RandomGenerator();
+        readonly RandomGenerator m_random = new RandomGenerator();
 
         // Used to make sure only one action is handled at a time.
-        object m_actionLock = new object();
+        readonly object m_actionLock = new object();
 
         // Limits the game in terms of rounds.
-        int? m_roundLimit = null;
+        readonly int? m_roundLimit = null;
 
         public GameEngine(List<InitalPlayer> players, GameMode mode, int? roundLimit = null)
         {
@@ -78,23 +78,34 @@ namespace GameCore
                 {
                     ConsumeActionInternal(action, userName, actionLog);
                 }
-                catch (GameError e)
+                catch (GameErrorException e)
                 {
                     // If the call throws an action exception, there was something wrong with the action. 
 
                     // Add the error to the log.
-                    actionLog.Add(GameLog.CreateError(e));
+                    actionLog.Add(GameLog.CreateError(e.GetGameError()));
+
+                    // If this was a fatal error, end the game.
+                    if (e.IsFatal)
+                    {
+                        EndGameInternal(actionLog, GameEndReason.GameEngineError);
+                    }   
 
                     // Return the error and the action log.                
-                    return (GameActionResponse.CreateError(e), actionLog);
+                    return (GameActionResponse.CreateError(e.GetGameError()), actionLog);
                 }
                 catch (Exception e)
                 {
                     // If this exception was thrown, it's most likely a bug.  
 
+                    Type t = e.GetType();
+
                     // Create an error and add it to the log.
                     GameError err = GameError.Create(m_state, ErrorTypes.Unknown, $"An exception was thrown while handling action. {e.Message}", false);
                     actionLog.Add(GameLog.CreateError(err));
+
+                    // This is a fatal error, end the game.         
+                    EndGameInternal(actionLog, GameEndReason.GameEngineError);
 
                     // Return the error.
                     return (GameActionResponse.CreateError(err), actionLog);
@@ -121,10 +132,10 @@ namespace GameCore
             {
                 EndGameInternal(actionLog, reason);
             }
-            catch (GameError e)
+            catch (GameErrorException e)
             {
                 // Add the error to the log.
-                actionLog.Add(GameLog.CreateError(e));
+                actionLog.Add(GameLog.CreateError(e.GetGameError()));
             }
             catch (Exception e)
             {
@@ -145,7 +156,7 @@ namespace GameCore
             // Note we don't take the action lock here, so if some game is stuck processing it will still get killed.
             if(m_state.CurrentTurnState.HasGameEnded)
             {
-                throw GameError.Create(m_state, ErrorTypes.GameEnded, $"The game has already been ended.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.GameEnded, $"The game has already been ended.", false, true);
             }
             
             // End the game by setting the game ended flag.
@@ -165,10 +176,10 @@ namespace GameCore
                 // Create an empty state helper to check for a winner.
                 winner = stateHelper.Player.CheckForWinner();
             }
-            catch (GameError e)
+            catch (GameErrorException e)
             {
                 // Add the error to the log.
-                actionLog.Add(GameLog.CreateError(e));
+                actionLog.Add(GameLog.CreateError(e.GetGameError()));
             }
             catch (Exception e)
             {
@@ -224,7 +235,7 @@ namespace GameCore
             // Validate the user can currently take the action they are trying to.
             if (!stateHelper.CurrentTurn.CanTakeAction(action.Action))
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"In the current turn state, it's not valid to {action.Action}.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"In the current turn state, it's not valid to {action.Action}.", true, false);
             }
 
             // If there are special actions, handle them.
@@ -254,7 +265,7 @@ namespace GameCore
                         // Return after we end the game.
                         return;
                     default:
-                        throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
+                        throw GameErrorException.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true, false);
                 }
             }
 
@@ -332,7 +343,7 @@ namespace GameCore
         {
             if(m_state.CurrentTurnState.HasGameEnded)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, "The game has ended, it can't be started.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, "The game has ended, it can't be started.", false, false);
             }
 
             // Set the flag.
@@ -351,23 +362,23 @@ namespace GameCore
             int playerIndex = stateHelper.Player.GetPlayerIndex();
             if(playerIndex == -1)
             {
-                throw GameError.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{stateHelper.Player.GetPlayerUserName()}` user name wasn't found in this game.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{stateHelper.Player.GetPlayerUserName()}` user name wasn't found in this game.", false, false);
             }
             if(!stateHelper.CurrentTurn.IsMyTurn())
             {
-                throw GameError.Create(m_state, ErrorTypes.NotPlayersTurn, $"`{stateHelper.Player.GetPlayerUserName()}` tried to send a action when it's not their turn.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.NotPlayersTurn, $"`{stateHelper.Player.GetPlayerUserName()}` tried to send a action when it's not their turn.", false, false);
             }
 
             // Next, make sure we have an action.
             if (action == null)
             {
-                throw GameError.Create(m_state, ErrorTypes.Unknown, $"No action object was sent", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.Unknown, $"No action object was sent", false, false);
             }
 
             // Last, make sure the game hasn't ended.
             if(stateHelper.CurrentTurn.HasGameEnded())
             {
-                throw GameError.Create(m_state, ErrorTypes.GameEnded, $"`{stateHelper.Player.GetPlayerUserName()}` can't take an action because the game has ended.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.GameEnded, $"`{stateHelper.Player.GetPlayerUserName()}` can't take an action because the game has ended.", false, false);
             }
         }
 
@@ -375,11 +386,11 @@ namespace GameCore
         {
             if(m_state.CurrentTurnState.Rolls == 0 || m_state.CurrentTurnState.DiceResults.Count == 0 || !stateHelper.CurrentTurn.HasCommittedToDiceResult())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The turn can't be advanced because the current turn hasn't rolled yet.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"The turn can't be advanced because the current turn hasn't rolled yet.", true, false);
             }
             if (!stateHelper.CurrentTurn.HasEndedTurn())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The current turn isn't over, so we can't go to the next player.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"The current turn isn't over, so we can't go to the next player.", false, false);
             }
 
             // Find the next player.
@@ -418,8 +429,8 @@ namespace GameCore
 
             if (actions.Count == 0)
             {
-                actions = stateHelper.CurrentTurn.GetPossibleActions();
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"There are no possible actions for the current player.", false);
+                stateHelper.CurrentTurn.GetPossibleActions();
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"There are no possible actions for the current player.", false, true);
             }
 
             // Build a action request object
@@ -441,15 +452,15 @@ namespace GameCore
             }
             catch (Exception e)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse roll dice options: {e.Message}", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse roll dice options: {e.Message}", true, false);
             }
             if (options.DiceCount < 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Number of dice to roll must be > 0", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"Number of dice to roll must be > 0", true, false);
             }
             if (options.DiceCount > stateHelper.Player.GetMaxDiceCountCanRoll())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.GetMaxDiceCountCanRoll()} currently.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.GetMaxDiceCountCanRoll()} currently.", true, false);
             }
 
             // Roll the dice!
@@ -483,15 +494,15 @@ namespace GameCore
             // Make sure we are in a valid state to do this.
             if(stateHelper.CurrentTurn.HasCommittedToDiceResult())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has already committed the dice result.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has already committed the dice result.", true);
             }
             if(m_state.CurrentTurnState.DiceResults.Count == 0 || m_state.CurrentTurnState.Rolls == 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't commit the results.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't commit the results.", true);
             }
             if(m_state.CurrentTurnState.SpecialActions == null || m_state.CurrentTurnState.SpecialActions.Count != 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.PendingSpecialActivations, $"The player has pending special activations that need to be resolved.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.PendingSpecialActivations, $"The player has pending special activations that need to be resolved.", true);
             }
 
             // Commit the dice result.
@@ -535,11 +546,11 @@ namespace GameCore
             }
             catch (Exception e)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse build options: {e.Message}", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"Failed to parse build options: {e.Message}", true);
             }
             if (!stateHelper.Marketplace.ValidateBuildingIndex(options.BuildingIndex))
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidActionOptions, $"Invalid building index set in build command.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"Invalid building index set in build command.", true);
             }
             
             // Validate the player is in a state where they can build this building.
@@ -547,15 +558,15 @@ namespace GameCore
             {
                 if(stateHelper.Player.CanAffordBuilding(options.BuildingIndex))
                 {
-                    throw GameError.Create(m_state, ErrorTypes.NotEnoughFunds, $"The player doesn't have enough coins to build the requested building type.", true);
+                    throw GameErrorException.Create(m_state, ErrorTypes.NotEnoughFunds, $"The player doesn't have enough coins to build the requested building type.", true);
                 }
                 else if(stateHelper.Player.HasReachedPerPlayerBuildingLimit(options.BuildingIndex))
                 {
-                    throw GameError.Create(m_state, ErrorTypes.PlayerMaxBuildingLimitReached, $"The player has reached the per player building limit.", true);
+                    throw GameErrorException.Create(m_state, ErrorTypes.PlayerMaxBuildingLimitReached, $"The player has reached the per player building limit.", true);
                 }
                 else
                 {
-                    throw GameError.Create(m_state, ErrorTypes.NotAvailableInMarketplace, $"The requested building isn't currently available in the marketplace.", true);
+                    throw GameErrorException.Create(m_state, ErrorTypes.NotAvailableInMarketplace, $"The requested building isn't currently available in the marketplace.", true);
                 }
             }
 
@@ -594,11 +605,11 @@ namespace GameCore
             // Make sure we are in a valid state to do this.
             if (!stateHelper.CurrentTurn.HasCommittedToDiceResult())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has not committed a dice roll yet.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player has not committed a dice roll yet.", true);
             }
             if (m_state.CurrentTurnState.DiceResults.Count == 0 || m_state.CurrentTurnState.Rolls == 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't end their turn.", true);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidStateToTakeAction, $"The player hasn't rolled the dice yet, so they can't end their turn.", true);
             }
 
             // Note: It's ok to end the turn without buying.
@@ -618,18 +629,18 @@ namespace GameCore
             // Validate
             if(!stateHelper.CurrentTurn.HasPendingSpecialActions())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"HandleSpecialAction was called but there were no special actions.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"HandleSpecialAction was called but there were no special actions.", false, true);
             }
             if(stateHelper.GetState().CurrentTurnState.SpecialActions[0] != action.Action)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"HandleSpecialAction was called with action {action.Action.ToString()} but it's not the top action on the list.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"HandleSpecialAction was called with action {action.Action.ToString()} but it's not the top action on the list.", false, true);
             }
 
             // Find the action handler 
             BuildingActivationBase act = BuildingActivationBase.GetActivation(action.Action);
             if(act == null)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"{action.Action.ToString()} was requested as a special action, but there was no handler for it.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"{action.Action.ToString()} was requested as a special action, but there was no handler for it.", false, true);
             }
 
             // Let the activation handle the player input.
@@ -651,15 +662,15 @@ namespace GameCore
             // Validate state.
             if(!stateHelper.CurrentTurn.HasCommittedToDiceResult())
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when a dice result wasn't committed.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when a dice result wasn't committed.", false);
             }
             if(m_state.CurrentTurnState.Rolls == 0 || m_state.CurrentTurnState.DiceResults.Count == 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when there were no dice results.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, "Income tried to be earned when there were no dice results.", false);
             }
             if(m_state.CurrentTurnState.SpecialActions.Count != 0)
             {
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, "Income can't be earned while there are pending special actions.", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, "Income can't be earned while there are pending special actions.", false);
             }
 
             // 
@@ -785,8 +796,7 @@ namespace GameCore
             string err = stateHelper.Validate();
             if(!String.IsNullOrWhiteSpace(err))
             {
-                // todo this should end the game.
-                throw GameError.Create(m_state, ErrorTypes.InvalidState, $"The game is now in an invalid state. Error: {err}", false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidState, $"The game is now in an invalid state. Error: {err}", false, true);
             }
         }
 

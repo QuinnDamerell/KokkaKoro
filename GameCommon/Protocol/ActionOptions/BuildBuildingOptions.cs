@@ -9,7 +9,7 @@ namespace GameCommon.Protocol.ActionOptions
 {
     public class BuildBuildingOptions
     {
-        // Indicates the building index to build built.
+        // Indicates the building index to be built.
         public int BuildingIndex = -1;
 
         // Since this is the last action a user can take, if this

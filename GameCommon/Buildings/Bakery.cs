@@ -38,7 +38,7 @@ namespace GameCommon.Buildings
         // See comments in base class. (BuildingBase.cs)
         internal override int InternalGetMaxBuildingCountInGame()
         {
-            return 7;
+            return 6;
         }
 
         // See comments in base class. (BuildingBase.cs)

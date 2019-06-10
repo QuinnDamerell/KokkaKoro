@@ -128,36 +128,8 @@ namespace GameService.ServiceCore
                     return KokkaKoroResponse<object>.CreateError($"Game full");
                 }
 
-                // Make sure the name is unique, for fun.
-                int count = 0;
-                while(count < m_players.Count())
-                {
-                    if(m_players[count].GetInGameName() == inGameName)
-                    {
-                        // Append an ending and restart.
-                        Random r = new Random();
-                        switch(r.Next(0, 5))
-                        {
-                            case 0:
-                                inGameName += "est";
-                                break;
-                            case 1:
-                                inGameName += "er";
-                                break;
-                            case 2:
-                                inGameName = "Dr "+ inGameName;
-                                break;
-                            case 3:
-                                inGameName += " the second";
-                                break;
-                            case 4:
-                                inGameName += " the great";
-                                break;
-                        }
-                        count = 0;
-                    }
-                    count++;
-                }
+                // Make sure the bot name is unique
+                GetUniqueName(ref inGameName);
 
                 // Add the player.
                 m_players.Add(new ServicePlayer(bot, inGameName));                
@@ -252,6 +224,73 @@ namespace GameService.ServiceCore
             return KokkaKoroResponse<object>.CreateResult(response);
         }
 
+        private void GetUniqueName(ref string userName)
+        {
+            int count = 0;
+            while (count < m_players.Count())
+            {
+                // See if this name matches any other names.
+                if (m_players[count].GetInGameName().ToLower() == userName.ToLower())
+                {
+                    // Append an ending
+                    Random r = new Random();
+                    switch (r.Next(0, 5))
+                    {
+                        case 0:
+                            userName += "est";
+                            break;
+                        case 1:
+                            userName += "er";
+                            break;
+                        case 2:
+                            userName = "Dr " + userName;
+                            break;
+                        case 3:
+                            userName += " the second";
+                            break;
+                        case 4:
+                            userName += " the great";
+                            break;
+                    }
+
+                    // Restart the search.
+                    count = 0;
+                }
+                count++;
+            }
+        }
+
+        private void EnsureUniqueNames()
+        {
+            int inner = 0;
+            int outer = 0;
+            while (inner < m_players.Count())
+            {
+                while(outer < m_players.Count())
+                {
+                    if(inner != outer && m_players[inner].GetInGameName() == m_players[outer].GetInGameName())
+                    {
+                        // If we have the same name, try to rename one.                        
+                        if(m_players[inner].IsBot())
+                        {
+                            string name = m_players[inner].GetInGameName();
+                            GetUniqueName(ref name);
+                            m_players[inner].SetInGameName(name);
+                        }
+                        else if (m_players[outer].IsBot())
+                        {
+                            string name = m_players[outer].GetInGameName();
+                            GetUniqueName(ref name);
+                            m_players[outer].SetInGameName(name);
+                        }
+                    }
+                    outer++;
+                }
+                inner++;
+                outer = 0;
+            }
+        }
+
         public string StartGame()
         {
             lock (m_gameLock)
@@ -269,6 +308,11 @@ namespace GameService.ServiceCore
                 // Put the game in the waiting for bots state.
                 m_state = KokkaKoroGameState.WaitingForHostedBots;
             }
+
+            // Make sure all player names are unique.
+            // Note this can change the name of a bot that has already been created,
+            // but who cares.
+            EnsureUniqueNames();
 
             // Note the time.
             m_startedAt = DateTime.UtcNow;

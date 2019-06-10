@@ -16,9 +16,9 @@ namespace GameCommon.BuildingActivations
 
     public class GreenCardActivation : BuildingActivationBase
     {
-        EstablishmentProduction m_production;
-        GreenCardType m_type;
-        int m_amount;
+        readonly EstablishmentProduction m_production;
+        readonly GreenCardType m_type;
+        readonly int m_amount;
 
 
         public GreenCardActivation(EstablishmentProduction production, int amountPerProduction)
@@ -57,7 +57,7 @@ namespace GameCommon.BuildingActivations
             // Make sure this is only being used on the active player
             if(playerIndexInvokedOn != state.CurrentTurnState.PlayerIndex)
             {
-                throw GameError.Create(state, ErrorTypes.InvalidState, $"GreenActivation was activated on the non-active player!", false);
+                throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"GreenActivation was activated on the non-active player!", false, true);
             }
 
             // Do work
@@ -78,7 +78,7 @@ namespace GameCommon.BuildingActivations
             }
             else
             {
-                throw GameError.Create(state, ErrorTypes.InvalidState, $"GreenActivation was activated with an unknown type.", false);
+                throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"GreenActivation was activated with an unknown type.", false, true);
             }            
         }
 
@@ -89,7 +89,7 @@ namespace GameCommon.BuildingActivations
 
         public override void PlayerAction(List<GameLog> log, GameAction<object> action, StateHelper stateHelper)
         {
-            throw GameError.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false);
+            throw GameErrorException.Create(stateHelper.GetState(), ErrorTypes.InvalidState, "This activation doesn't need player actions.", false, true);
         }
     }
 }
