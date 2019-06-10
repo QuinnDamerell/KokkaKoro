@@ -189,24 +189,9 @@ namespace GameService.ServiceCore
             }
 
             // Validate
-            if (request.CommandOptions.PlayerLimit.HasValue && request.CommandOptions.PlayerLimit.Value < 0)
-            {
-                return KokkaKoroResponse<object>.CreateError("Invalid player limit.");
-            }
             if(String.IsNullOrWhiteSpace(request.CommandOptions.GameName))
             {
                 return KokkaKoroResponse<object>.CreateError("GameName is a required option.");
-            }
-
-            TimeSpan? turnTime = null;
-            if(request.CommandOptions.TurnTimeLmitSeconds.HasValue)
-            {
-                turnTime = new TimeSpan(0, 0, request.CommandOptions.TurnTimeLmitSeconds.Value);
-            }
-            TimeSpan? minTurn = null;
-            if (request.CommandOptions.MinTurnTimeSeconds.HasValue)
-            {
-                minTurn = new TimeSpan(0, 0, request.CommandOptions.MinTurnTimeSeconds.Value);
             }
             TimeSpan? gameTime = null;
             if (request.CommandOptions.GameTimeLimitSeconds.HasValue)
@@ -216,12 +201,9 @@ namespace GameService.ServiceCore
 
             // Create the game
             ServiceGame game = new ServiceGame(
-                request.CommandOptions.PlayerLimit,
                 request.CommandOptions.GameName,
                 userName,
                 request.CommandOptions.Password,
-                turnTime,
-                minTurn,
                 gameTime
                 );
 
