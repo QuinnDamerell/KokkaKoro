@@ -123,9 +123,10 @@ namespace GameService.ServiceCore
         {
             return new KokkaKoroPlayer()
             {
-                BotName = GetBotName(),
                 IsBot = IsBot(),
-                PlayerName = m_userName
+                PlayerName = m_userName,
+                IsReady = (IsBot() ? m_bot.IsReady() : true),
+                BotDetails = (IsBot() ? m_bot.GetBotPlayerDetails() : null               
             };
         }
     }

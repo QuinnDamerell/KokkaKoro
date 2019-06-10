@@ -10,20 +10,6 @@ using System.Threading.Tasks;
 
 namespace GameService.ServiceCore
 {
-    public enum ServiceBotState
-    {
-        // The bot is waiting to be started
-        NotStarted,
-        // The process has been started, but the bot hasn't connected
-        Starting,
-        // The bot is joined to the game.
-        Joined,
-        // The process is being killed
-        Terminated,
-        // The process is dead and done cleaning up.
-        CleanedUp
-    }
-
     public class ServiceBot
     {
         KokkaKoroBot m_info;
@@ -37,7 +23,7 @@ namespace GameService.ServiceCore
         string m_gamePassword;
 
         Thread m_processMonitor;
-        ServiceBotState m_state;
+        KokkaKoroBotState m_state;
         object m_stateLock = new object();
 
         // Output
@@ -50,18 +36,18 @@ namespace GameService.ServiceCore
             m_info = info;
             m_localPath = localPath;
             m_wasLoadedFromCache = wasInCache;
-            m_state = ServiceBotState.NotStarted;       
+            m_state = KokkaKoroBotState.NotStarted;       
         }
 
         public bool StartBot(Guid gameId, string gamePassword, string userName, string passcode)
         {
             lock(m_stateLock)
             {
-                if(m_state != ServiceBotState.NotStarted)
+                if(m_state != KokkaKoroBotState.NotStarted)
                 {
                     return false;
                 }
-                m_state = ServiceBotState.Starting;
+                m_state = KokkaKoroBotState.Starting;
             }
 
             m_userName = userName;
@@ -78,13 +64,14 @@ namespace GameService.ServiceCore
         {
             lock (m_stateLock)
             {
-                if (m_state != ServiceBotState.Starting)
+                if (m_state != KokkaKoroBotState.Starting)
                 {
                     SetFatalError("Thread not started in correct state.");
                     return;
                 }
             }
 
+            // Start the process.
             Process process = new Process();
             try
             {
@@ -97,10 +84,13 @@ namespace GameService.ServiceCore
                 SetFatalError(msg);
             }
 
+            //
+            // No matter what, when the process is ended clean up.
+
             // Update the state
             lock (m_stateLock)
             {
-                m_state = ServiceBotState.Terminated;
+                m_state = KokkaKoroBotState.Terminated;
             }
 
             // Ensure the process is dead
@@ -109,13 +99,11 @@ namespace GameService.ServiceCore
                 process.Kill();
             }
             catch { }
-
-            Console.WriteLine(m_stdOutput.ToString());
-
+            
             // Update the state
             lock (m_stateLock)
             {
-                m_state = ServiceBotState.CleanedUp;
+                m_state = KokkaKoroBotState.CleanedUp;
             }
         }
 
@@ -166,7 +154,7 @@ namespace GameService.ServiceCore
             process.BeginErrorReadLine();
 
             // Wait for the process to die.
-            while (m_state == ServiceBotState.Starting || m_state == ServiceBotState.Joined)
+            while (m_state == KokkaKoroBotState.Starting || m_state == KokkaKoroBotState.Joined)
             {
                 // Wake up every 500ms to check state.
                 process.WaitForExit(500);
@@ -202,7 +190,7 @@ namespace GameService.ServiceCore
         public void Kill()
         {
             // Set the state to Terminated, this will kill the process thread.
-            m_state = ServiceBotState.Terminated;
+            m_state = KokkaKoroBotState.Terminated;
         }
 
         public void WaitForCleanup()
@@ -211,7 +199,7 @@ namespace GameService.ServiceCore
             {
                 lock(m_stateLock)
                 {
-                    if(m_state == ServiceBotState.CleanedUp)
+                    if(m_state == KokkaKoroBotState.CleanedUp)
                     {
                         return;
                     }
@@ -225,16 +213,16 @@ namespace GameService.ServiceCore
             lock(m_stateLock)
             {
                 // Only move to joined if we are currently starting.
-                if(m_state == ServiceBotState.Starting)
+                if(m_state == KokkaKoroBotState.Starting)
                 {
-                    m_state = ServiceBotState.Joined;
+                    m_state = KokkaKoroBotState.Joined;
                 }
             }
         }
 
         public bool IsReady()
         {
-            return m_state == ServiceBotState.Joined;
+            return m_state == KokkaKoroBotState.Joined;
         }
 
         private string GetExePath()
@@ -250,6 +238,16 @@ namespace GameService.ServiceCore
         public KokkaKoroBot GetBotInfo()
         {
             return m_info;
+        }
+
+        public KokkaKoroBotPlayer GetBotPlayerDetails()
+        {
+            return new KokkaKoroBotPlayer()
+            {
+                Bot = m_info,
+                IfErrorFatialError = m_fatalError,
+                State = m_state
+            };
         }
 
         public bool WasInCache()

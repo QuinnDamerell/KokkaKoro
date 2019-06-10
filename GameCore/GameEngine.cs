@@ -20,10 +20,19 @@ namespace GameCore
 
     public class GameEngine
     {
+        // The engine state.
         GameState m_state;
+
+        // Keeps track of the game log.
         LogKeeper m_logKeeper;
+
+        // Gives us random numbers
         RandomGenerator m_random = new RandomGenerator();
+
+        // Used to make sure only one action is handled at a time.
         object m_actionLock = new object();
+
+        // Limits the game in terms of rounds.
         int? m_roundLimit = null;
 
         public GameEngine(List<InitalPlayer> players, GameMode mode, int? roundLimit = null)
@@ -38,16 +47,25 @@ namespace GameCore
             SetupGame(players, mode);
         }
 
+        // Returns the current game logs.
         public List<GameLog> GetLogs()
         {
             return m_logKeeper.GetLogs();
         }
 
+        // Returns the current state object of the game.
         public GameState GetState()
         {
             return m_state;
         }
 
+        // Indicates if th game has ended or not yet.
+        public bool HasEnded()
+        {
+            return m_state.CurrentTurnState.HasGameEnded;
+        }
+
+        // Take a play action and handles it.
         public (GameActionResponse, List<GameLog>) ConsumeAction(GameAction<object> action, string userName)
         {
             // We only want to allow one action to be attempted at a time.
@@ -92,6 +110,7 @@ namespace GameCore
             }            
         }
 
+        // Ends the game, given a reason.
         public (GameActionResponse, List<GameLog>) EndGame(GameEndReason reason)
         {
             // Create a action log.
@@ -132,8 +151,7 @@ namespace GameCore
             // End the game by setting the game ended flag.
             m_state.CurrentTurnState.HasGameEnded = true;
 
-            // Now try to find if there was a winner.
-            // We try catch this to make sure we always send the end message.
+            // Always try to find a winner no matter the reason.
             GamePlayer winner = null;
             try
             {
@@ -159,13 +177,17 @@ namespace GameCore
                 actionLog.Add(GameLog.CreateError(err));
             }
 
-            // Create the end game message
+            // If we have a reason, ignore the current reason and make it a winner.
             int? playerIndex = null;
             if (winner != null)
             {
+                reason = GameEndReason.Winner;
                 playerIndex = winner.PlayerIndex;
             }
-            actionLog.Add(GameLog.CreateGameStateUpdate<GameEndDetails>(m_state, StateUpdateType.GameEnd, $"The Game is over because {reason.ToString()}! {(winner == null ? "There was no winner!" : $"{winner.Name} won!")}",
+
+            // Log!
+            actionLog.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.GameEnd, 
+                $"{(winner != null ? $"{winner.Name} has won! " : "")}The game has ended because '{reason.ToString()}'",
                 new GameEndDetails() { PlayerIndex = playerIndex, Reason = reason }));
 
             // Return success.
@@ -179,7 +201,7 @@ namespace GameCore
             // If there are any errors handling the action, they should throw the GameError exception which will be added to the
             // game log automatically.
 
-            // Build a state helper.
+            // Build a state helper for the current user.
             StateHelper stateHelper = m_state.GetStateHelper(userName);
 
             // Check if the game has not been started yet. 
@@ -227,6 +249,10 @@ namespace GameCore
                     case GameActionType.EndTurn:
                         HandleEndTurnAction(actionLog, action, stateHelper);
                         break;
+                    case GameActionType.Forfeit:
+                        EndGameInternal(actionLog, GameEndReason.PlayerForfeit, stateHelper);
+                        // Return after we end the game.
+                        return;
                     default:
                         throw GameError.Create(m_state, ErrorTypes.UknownAction, $"Unknown action type. {action.Action}", true);
                 }
@@ -237,7 +263,7 @@ namespace GameCore
             if (player != null)
             {
                 // We have a winner!
-                EndGameInternal(actionLog, GameEndReason.PlayerWon, stateHelper);
+                EndGameInternal(actionLog, GameEndReason.Winner, stateHelper);
                 return;
             }
 
@@ -304,6 +330,11 @@ namespace GameCore
 
         private void StartGame(List<GameLog> log, StateHelper stateHelper)
         {
+            if(m_state.CurrentTurnState.HasGameEnded)
+            {
+                throw GameError.Create(m_state, ErrorTypes.InvalidState, "The game has ended, it can't be started.", false);
+            }
+
             // Set the flag.
             m_state.CurrentTurnState.HasGameStarted = true;
 

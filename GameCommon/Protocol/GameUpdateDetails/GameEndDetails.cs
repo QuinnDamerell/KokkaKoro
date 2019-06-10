@@ -9,8 +9,11 @@ namespace GameCommon.Protocol.GameUpdateDetails
 {
     public enum GameEndReason
     {
-        [EnumMember(Value = "PlayerWon")]
-        PlayerWon,
+        [EnumMember(Value = "Winner")]
+        Winner,
+
+        [EnumMember(Value = "PlayerForfeit")]
+        PlayerForfeit,
 
         [EnumMember(Value = "GameTimeout")]
         GameTimeout,

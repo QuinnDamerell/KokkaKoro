@@ -53,9 +53,9 @@ namespace GameService.WebsocketsHelpers
                     {
                         response = await m_socket.ReceiveAsync(new ArraySegment<byte>(buffer), m_readCancelToken.Token);
                         message.AddRange(new ArraySegment<byte>(buffer, 0, response.Count));
-                    } while (!response.EndOfMessage && response.CloseStatus == WebSocketCloseStatus.Empty);
+                    } while (!response.EndOfMessage && (response.CloseStatus == null || response.CloseStatus == WebSocketCloseStatus.Empty));
 
-                    if(response.CloseStatus != null && response.CloseStatus != WebSocketCloseStatus.Empty)
+                    if (response.CloseStatus != null && response.CloseStatus != WebSocketCloseStatus.Empty)
                     {
                         CloseWebSocket(false);
                         return;

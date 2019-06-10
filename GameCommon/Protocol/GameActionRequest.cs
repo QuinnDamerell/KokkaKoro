@@ -30,6 +30,10 @@ namespace GameCommon.Protocol
         // Tells the server the client wishes to end the turn.
         [EnumMember(Value = "EndTurn")]
         EndTurn,
+
+        // If the player hits and error they can't recover from, they can forfeit. This will end the game and they will lose.
+        [EnumMember(Value = "Forfeit")]
+        Forfeit
     }
 
     public class GameActionRequest

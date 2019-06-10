@@ -45,22 +45,25 @@ namespace ServiceProtocol.Common
         // The current players in the game.
         public List<KokkaKoroPlayer> Players = new List<KokkaKoroPlayer>();
 
-        // How many players can join
-        public int PlayerLimit;
-
         // Indicates if there's a password to join
         public bool HasPassword;
-
-        // Indicates the max time a turn can take.
-        public double TurnTimeLimitSeconds;
-
-        // Indicates the minimum time a turn can take
-        public double MinTurnTimeLimitSeconds;
 
         // Indicates the max time the game can take.
         public double GameTimeLimitSeconds;
 
+        // Optionally set, if the game ended in an error, this string gives context about why.
+        public string IfFailedFatialError;
+
         // Indicates when the game was created.
         public DateTime Created;
+
+        // Indicates when the game was sent the start command.
+        public DateTime? Started;
+
+        // Indicates when the game actually started, (since we have to connect bots initially)
+        public DateTime? GameEngineStarted;
+
+        // Indicates when the game ended.
+        public DateTime? Eneded;
     }
 }

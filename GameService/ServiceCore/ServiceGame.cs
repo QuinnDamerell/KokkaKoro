@@ -1,76 +1,58 @@
 ﻿using GameCore;
 using GameCommon.Protocol;
 using GameService.WebsocketsHelpers;
-using Newtonsoft.Json;
 using ServiceProtocol;
 using ServiceProtocol.Common;
 using ServiceProtocol.Responses;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 using GameCommon;
-using Newtonsoft.Json.Linq;
 
 namespace GameService.ServiceCore
 {
     public class ServiceGame
     {
-        static TimeSpan c_maxGameLength = new TimeSpan(0, 1, 0);
-        static TimeSpan c_maxTurnTime   = c_maxGameLength;
-        static TimeSpan c_minTurnTime   = new TimeSpan(0, 0, 0);
-        static int c_maxRoundCount      = 5000; 
+        static readonly TimeSpan c_maxGameLength = new TimeSpan(0, 10, 0);
+        static readonly int c_maxRoundCount      = 5000;
+        static readonly int c_maxPlayerCount     = 4;
 
         Guid m_id;
         KokkaKoroGameState m_state;
         object m_gameLock = new object();
-        int m_playerLimit;
         string m_password;
         string m_gameName;
         string m_createdBy;
         int m_roundLimit;
-        TimeSpan m_minTurnTimeLimit;
-        TimeSpan m_turnTimeLimit;
         TimeSpan m_gameTimeLmit;
         DateTime m_createdAt;
-
+        DateTime? m_startedAt;
+        DateTime? m_gameStartedAt;
+        DateTime? m_gameEndedAt;
         string m_fatalError = null;
 
+        // The current players.
         List<ServicePlayer> m_players = new List<ServicePlayer>();
 
         // Game stuff
         GameEngine m_gameEngine;
 
-        public ServiceGame(int? playerLimit = null, string gameName = null, string createdBy = null, string password = null, TimeSpan? turnTimeLimit = null, TimeSpan? minTurnLimit = null, TimeSpan? gameTimeLimit = null, int? roundLimit = null)
+        public ServiceGame(string gameName = null, string createdBy = null, string password = null, TimeSpan? gameTimeLimit = null, int? roundLimit = null)
         {
             m_state = KokkaKoroGameState.Lobby;
             m_id = Guid.NewGuid();
             m_createdAt = DateTime.UtcNow;
             m_roundLimit = roundLimit.HasValue ? roundLimit.Value : int.MaxValue;
             m_gameTimeLmit = gameTimeLimit.HasValue ? gameTimeLimit.Value : TimeSpan.MaxValue;
-            m_turnTimeLimit = turnTimeLimit.HasValue ? turnTimeLimit.Value : TimeSpan.MaxValue;
-            m_minTurnTimeLimit = minTurnLimit.HasValue ? minTurnLimit.Value : TimeSpan.MinValue;
             m_gameName = String.IsNullOrWhiteSpace(gameName) ? $"game-{m_id}" : gameName;
             m_createdBy = String.IsNullOrWhiteSpace(gameName) ? $"unknown" : createdBy;
             m_password = String.IsNullOrWhiteSpace(password) ? null : password;
-            m_playerLimit = playerLimit.HasValue ? playerLimit.Value : 4;
 
             // Limit the game length.
             if(m_gameTimeLmit > c_maxGameLength)
             {
                 m_gameTimeLmit = c_maxGameLength;
-            }
-            if(m_turnTimeLimit > c_maxTurnTime)
-            {
-                m_turnTimeLimit = c_maxTurnTime;
-            }
-            if(m_minTurnTimeLimit < c_minTurnTime)
-            {
-                m_minTurnTimeLimit = c_minTurnTime;
             }
             if(m_roundLimit > c_maxRoundCount)
             {
@@ -101,6 +83,8 @@ namespace GameService.ServiceCore
             return m_password.Equals(userPassword);
         }
 
+        #region Setup Stuff
+
         public async Task<KokkaKoroResponse<object>> AddHostedBot(string inGameName, string botName)
         {
             if(String.IsNullOrWhiteSpace(inGameName) || String.IsNullOrWhiteSpace(botName))
@@ -115,7 +99,7 @@ namespace GameService.ServiceCore
                 {
                     return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
                 }               
-                if (m_players.Count() >= m_playerLimit)
+                if (m_players.Count() >= c_maxPlayerCount)
                 {
                     return KokkaKoroResponse<object>.CreateError($"Game full");
                 }
@@ -139,7 +123,7 @@ namespace GameService.ServiceCore
                 {
                     return KokkaKoroResponse<object>.CreateError($"Game not in joinable state");
                 }
-                if (m_players.Count() >= m_playerLimit)
+                if (m_players.Count() >= c_maxPlayerCount)
                 {
                     return KokkaKoroResponse<object>.CreateError($"Game full");
                 }
@@ -199,7 +183,7 @@ namespace GameService.ServiceCore
             ServicePlayer foundUser = null;
             lock (m_gameLock)
             {
-                // Search to see if the username already exists.
+                // Search to see if the user name already exists.
                 foreach(ServicePlayer p in m_players)
                 {
                     if(p.GetUserName().Equals(userName))
@@ -225,7 +209,7 @@ namespace GameService.ServiceCore
                 if (foundUser == null)
                 {
                     // Check the player count.
-                    if (m_players.Count() >= m_playerLimit)
+                    if (m_players.Count() >= c_maxPlayerCount)
                     {
                         return KokkaKoroResponse<object>.CreateError($"Game full");
                     }
@@ -286,6 +270,9 @@ namespace GameService.ServiceCore
                 m_state = KokkaKoroGameState.WaitingForHostedBots;
             }
 
+            // Note the time.
+            m_startedAt = DateTime.UtcNow;
+
             // Spawn the any bot players.
             bool hasBots = false;
             foreach (ServicePlayer p in m_players)
@@ -304,6 +291,47 @@ namespace GameService.ServiceCore
 
             return null;
         }
+
+        private void StartGameInternal()
+        {
+            lock (m_gameLock)
+            {
+                if (m_state != KokkaKoroGameState.Lobby && m_state != KokkaKoroGameState.WaitingForHostedBots)
+                {
+                    return;
+                }
+                m_state = KokkaKoroGameState.InProgress;
+            }
+
+            // First of all, take all of the players and shuffle them to get the player order.
+            Random random = new Random((int)DateTime.Now.Ticks);
+            for (int i = 0; i < m_players.Count * 10; i++)
+            {
+                int from = random.Next(0, m_players.Count);
+                int to = random.Next(0, m_players.Count);
+                ServicePlayer tmp = m_players[to];
+                m_players[to] = m_players[from];
+                m_players[from] = tmp;
+            }
+
+            // Now let's begin!
+            m_gameStartedAt = DateTime.UtcNow;
+            List<InitalPlayer> players = new List<InitalPlayer>();
+            foreach (ServicePlayer p in m_players)
+            {
+                players.Add(new InitalPlayer() { FriendlyName = p.GetInGameName(), UserName = p.GetUserName() });
+            }
+            m_gameEngine = new GameEngine(players, GameMode.Base, m_roundLimit);
+
+            // Invoke the first null action to get the ball rolling.
+            // Ignore the response.
+            (GameActionResponse response, List<GameLog> actionLog) = m_gameEngine.ConsumeAction(null, null);
+
+            // Send the messages generated by the action to the players.
+            BroadcastMessages(actionLog);
+        }
+
+        #endregion
 
         public GetGameLogsResponse GetGameLogs()
         {
@@ -358,50 +386,25 @@ namespace GameService.ServiceCore
             // Note, this will validate if the user is in the game for us.
             (GameActionResponse response, List<GameLog> actionLog) = m_gameEngine.ConsumeAction(action, userName);
 
+            // Check if the game has ended yet.
+            if(m_gameEngine.HasEnded())
+            {
+                // If it has, set the time and make sure we update the state.
+                if(!m_gameEndedAt.HasValue)
+                {
+                    m_gameEndedAt = DateTime.UtcNow;
+                }
+
+                // Do this on a async thread so we don't block the caller.
+                Task.Run(() => EnsureEnded());
+            }
+
             // Broadcast the game log updates.
             BroadcastMessages(actionLog);
 
             // Return the response.
             return SendGameActionResponse.CreateResponse(response);
-        }
-
-        private void StartGameInternal()
-        {
-            lock(m_gameLock)
-            {
-                if(m_state != KokkaKoroGameState.Lobby && m_state != KokkaKoroGameState.WaitingForHostedBots)
-                {
-                    return;
-                }
-                m_state = KokkaKoroGameState.InProgress;
-            }
-
-            // First of all, take all of the players and shuffle them to get the player order.
-            Random random = new Random((int)DateTime.Now.Ticks);
-            for (int i = 0; i < m_players.Count * 10; i++)
-            {
-                int from = random.Next(0, m_players.Count);
-                int to = random.Next(0, m_players.Count);
-                ServicePlayer tmp = m_players[to];
-                m_players[to] = m_players[from];
-                m_players[from] = tmp;
-            }
-
-            // Now let's begin!
-            List<InitalPlayer> players = new List<InitalPlayer>();
-            foreach (ServicePlayer p in m_players)
-            {
-                players.Add(new InitalPlayer() { FriendlyName = p.GetInGameName(), UserName = p.GetUserName() });
-            }
-            m_gameEngine = new GameEngine(players, GameMode.Base, m_roundLimit);
-
-            // Invoke the first null action to get the ball rolling.
-            // Ignore the response.
-            (GameActionResponse response, List<GameLog> actionLog) = m_gameEngine.ConsumeAction(null, null);
-
-            // Send the messages generated by the action to the players.
-            BroadcastMessages(actionLog);
-        }
+        }     
 
         public void GameTick()
         {
@@ -459,12 +462,25 @@ namespace GameService.ServiceCore
                 m_state = KokkaKoroGameState.Complete;
             }
 
-            // Make sure the game has ended, if it hasn't yet, it would be due to a timeout.
-            // Ignore the response.
-            (GameActionResponse response, List<GameLog> actionLog) = m_gameEngine.EndGame(GameCommon.Protocol.GameUpdateDetails.GameEndReason.GameTimeout);
+            GameEngine engine = m_gameEngine;
+            if (engine != null)
+            {
+                if (!engine.HasEnded())
+                {
+                    // Make sure the game has ended, if it hasn't yet, it would be due to a timeout.
+                    // Ignore the response.
+                    (GameActionResponse response, List<GameLog> actionLog) = m_gameEngine.EndGame(GameCommon.Protocol.GameUpdateDetails.GameEndReason.GameTimeout);
 
-            // Broadcast the game log updates.
-            BroadcastMessages(actionLog);
+                    // Broadcast the game log updates.
+                    BroadcastMessages(actionLog);
+                }
+            }
+
+            // Set the end time if not already.
+            if(!m_gameEndedAt.HasValue)
+            {
+                m_gameEndedAt = DateTime.UtcNow;
+            }
 
             // Get a local list of the players
             List<ServicePlayer> localPlayers = new List<ServicePlayer>();
@@ -531,15 +547,16 @@ namespace GameService.ServiceCore
             {
                 State = m_state,
                 Id = m_id,
-                PlayerLimit = (int)m_playerLimit,
                 Players = players,
                 GameName = m_gameName,
                 CreatedBy = m_createdBy,
                 HasPassword = !String.IsNullOrWhiteSpace(m_password),
-                TurnTimeLimitSeconds = m_turnTimeLimit.TotalSeconds,
-                MinTurnTimeLimitSeconds = m_minTurnTimeLimit.TotalSeconds,
                 GameTimeLimitSeconds = m_gameTimeLmit.TotalSeconds,
-                Created = m_createdAt
+                Created = m_createdAt,
+                Started = m_startedAt,
+                GameEngineStarted = m_gameStartedAt,
+                Eneded = m_gameEndedAt,
+                IfFailedFatialError = m_fatalError
             };
         }
 

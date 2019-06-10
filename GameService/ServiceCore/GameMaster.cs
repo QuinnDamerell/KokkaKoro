@@ -106,6 +106,70 @@ namespace GameService.ServiceCore
         Dictionary<Guid, ServiceGame> m_currentGames = new Dictionary<Guid, ServiceGame>();
         Thread m_gameManagerThread = null;
 
+        public void GameManagerLoop()
+        {
+            while (true)
+            {
+                DateTime start = DateTime.Now;
+                try
+                {
+                    GameManagerDoWork();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Exception in game manager loop.", e);
+                }
+
+                // Sleep for a while
+                TimeSpan workTime = DateTime.Now - start;
+                TimeSpan diff = new TimeSpan(0, 0, 1) - workTime;
+                if (diff.TotalMilliseconds > 0)
+                {
+                    Thread.Sleep(diff);
+                }
+            }
+        }
+
+        public void GameManagerDoWork()
+        {
+            // First of all, find an remove any old games that exist.
+            List<ServiceGame> oldGames = new List<ServiceGame>();
+            lock (m_currentGames)
+            {
+                foreach (KeyValuePair<Guid, ServiceGame> p in m_currentGames)
+                {
+                    if (DateTime.UtcNow - p.Value.GetCreatedAt() > c_maxKeepGameAroundTime)
+                    {
+                        oldGames.Add(p.Value);
+                    }
+                }
+                foreach (ServiceGame g in oldGames)
+                {
+                    m_currentGames.Remove(g.GetId());
+                }
+            }
+            foreach (ServiceGame g in oldGames)
+            {
+                g.EnsureEnded();
+            }
+
+            // Next call the game tick on all active games.
+            // But we don't want to hold the map lock, so make a copy of the list
+            // and then call on it.
+            List<ServiceGame> currentGames = new List<ServiceGame>();
+            lock (m_currentGames)
+            {
+                foreach (KeyValuePair<Guid, ServiceGame> p in m_currentGames)
+                {
+                    currentGames.Add(p.Value);
+                }
+            }
+            foreach (ServiceGame g in currentGames)
+            {
+                g.GameTick();
+            }
+        }
+
         private KokkaKoroResponse<object> CreateGame(string command, string userName)
         {
             KokkaKoroRequest<CreateGameOptions> request;
@@ -271,70 +335,6 @@ namespace GameService.ServiceCore
             else
             {
                 return KokkaKoroResponse<object>.CreateError($"Failed to get game logs.");
-            }
-        }
-
-        public void GameManagerLoop()
-        {
-            while(true)
-            {
-                DateTime start = DateTime.Now;
-                try
-                {
-                    GameManagerDoWork();
-                }
-                catch(Exception e)
-                {
-                    Logger.Error($"Exception in game manager loop.", e);
-                }
-
-                // Sleep for a while
-                TimeSpan workTime = DateTime.Now - start;
-                TimeSpan diff = new TimeSpan(0, 0, 1) - workTime;
-                if(diff.TotalMilliseconds > 0)
-                {
-                    Thread.Sleep(diff);
-                }
-            }
-        }
-
-        public void GameManagerDoWork()
-        {
-            // First of all, find an remove any old games that exist.
-            List<ServiceGame> oldGames = new List<ServiceGame>();
-            lock (m_currentGames)
-            {
-                foreach(KeyValuePair<Guid, ServiceGame> p in m_currentGames)
-                {
-                    if(DateTime.UtcNow - p.Value.GetCreatedAt() > c_maxKeepGameAroundTime)
-                    {
-                        oldGames.Add(p.Value);
-                    }
-                }
-                foreach(ServiceGame g in oldGames)
-                {
-                    m_currentGames.Remove(g.GetId());
-                }
-            }
-            foreach(ServiceGame g in oldGames)
-            {
-                g.EnsureEnded();
-            }
-
-            // Next call the game tick on all active games.
-            // But we don't want to hold the map lock, so make a copy of the list
-            // and then call on it.
-            List<ServiceGame> currentGames = new List<ServiceGame>();
-            lock (m_currentGames)
-            {
-                foreach (KeyValuePair<Guid, ServiceGame> p in m_currentGames)
-                {
-                    currentGames.Add(p.Value);
-                }
-            }
-            foreach(ServiceGame g in currentGames)
-            {
-                g.GameTick();
             }
         }
 
