@@ -4,28 +4,51 @@ using System.Text;
 
 namespace GameCommon.StateHelpers
 {
-    // State helper is a read-only class that helps answer current state questions.
-    // The state helper takes a perspective username, any functions called without specifying the user
-    // will assume the perspective username.
+    /// <summary>
+    /// State helper is a read-only class that helps answer current state questions.
+    /// The state helper takes a perspective username, any functions called without specifying the user
+    /// will assume the perspective username.
+    /// </summary>
     public class StateHelper
     {
         //
         // Public vars
         //
+
+        /// <summary>
+        /// Helpers for player stuff
+        /// </summary>
         public PlayerHelper Player;
+
+        /// <summary>
+        /// Helpers for current turn stuff
+        /// </summary>
         public CurrentTurnHelper CurrentTurn;
+
+        /// <summary>
+        /// Helpers for the marketplace
+        /// </summary>
         public MarketplaceHelper Marketplace;
+
+        /// <summary>
+        /// Gives access to the building rules.
+        /// </summary>
         public BuildingRules BuildingRules;
 
         // 
         // Internal vars
         // 
-        string m_perspectiveUserName;
         readonly GameState m_state;
 
-        public StateHelper(GameState state, string fromPerspectiveUserName)
+        /// <summary>
+        /// Creates a new state helper given a user name perspective.
+        /// To get a StateHelper object, use the GameState GetStateHelper function.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <param name="fromPerspectiveUserName"></param>
+        internal StateHelper(GameState state, string fromPerspectiveUserName)
         {
-            Player = new PlayerHelper(this);
+            Player = new PlayerHelper(this, fromPerspectiveUserName);
             CurrentTurn = new CurrentTurnHelper(this);
             Marketplace = new MarketplaceHelper(this);
             if (state != null)
@@ -34,34 +57,27 @@ namespace GameCommon.StateHelpers
             }
 
             m_state = state;
-            m_perspectiveUserName = fromPerspectiveUserName;
         }
 
+        /// <summary>
+        /// Returns the current game state.
+        /// </summary>
+        /// <returns></returns>
         public GameState GetState()
         {
             return m_state;
         }
 
-        public string GetPerspectiveUserName()
-        {
-            return m_perspectiveUserName;
-        }
-
-        public void SetPerspectiveUserName(string newUserName)
-        {
-            m_perspectiveUserName = newUserName;
-        }
-
+        /// <summary>
+        /// Ensures that all of the state is valid.
+        /// </summary>
+        /// <returns>An error string if something is wrong.</returns>
         public string Validate()
         {
             // Validate base object things.
             if(m_state == null)
             {
                 return "We don't have a state.";
-            }
-            if(String.IsNullOrWhiteSpace(m_perspectiveUserName))
-            {
-                return "No perspective user name";
             }
             if(m_state.Market == null || m_state.Players == null || m_state.CurrentTurnState == null || BuildingRules == null)
             {

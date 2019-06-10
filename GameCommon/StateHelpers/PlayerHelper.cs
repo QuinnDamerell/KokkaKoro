@@ -9,8 +9,9 @@ namespace GameCommon.StateHelpers
     public class PlayerHelper
     {
         StateHelper m_gameHelper;
+        string m_perspectiveUserName;
 
-        internal PlayerHelper(StateHelper gameHelper)
+        internal PlayerHelper(StateHelper gameHelper, string fromPerspectiveUserName)
         {
             m_gameHelper = gameHelper;
         }
@@ -26,7 +27,12 @@ namespace GameCommon.StateHelpers
             {
                 return "There are no players";
             }
+            if(String.IsNullOrWhiteSpace(m_perspectiveUserName))
+            {
+                return "There is no perspective user name.";
+            }
             int count = 0;
+            bool matchedPerspective = false;
             foreach (GamePlayer p in s.Players)
             {
                 if(p.PlayerIndex != count)
@@ -50,6 +56,10 @@ namespace GameCommon.StateHelpers
                 {
                     return $"Player {p.UserName}'s owned building list is too short";
                 }
+                if(p.UserName == m_perspectiveUserName)
+                {
+                    matchedPerspective = true;
+                }
                 foreach(int i in p.OwnedBuildings)
                 {
                     if(i < 0)
@@ -58,7 +68,30 @@ namespace GameCommon.StateHelpers
                     }
                 }
             }
+            if(!matchedPerspective)
+            {
+                return $"The perspective user name {m_perspectiveUserName} didn't match and player user names";
+            }
             return null;
+        }
+
+
+        /// <summary>
+        /// Returns the user name perspective of the player all default question will be answered from.
+        /// </summary>
+        /// <returns></returns>
+        public string GetPerspectiveUserName()
+        {
+            return m_perspectiveUserName;
+        }
+
+        /// <summary>
+        /// Sets a new user perspective. 
+        /// </summary>
+        /// <param name="newUserName"></param>
+        public void SetPerspectiveUserName(string newUserName)
+        {
+            m_perspectiveUserName = newUserName;
         }
 
         public int GetPlayerCount()
