@@ -82,7 +82,7 @@ namespace ServiceUtility
             await service.Login(loginOptions);
             log.Info($"Logged in.");
 
-            while(true)
+            while (true)
             {
                 int command = GetCommand(log);
 
@@ -95,9 +95,6 @@ namespace ServiceUtility
                         await GetGamesLogs(log, service);
                         break;
                     case 3:
-                        await GetGamesLogs(log, service, true);
-                        break;
-                    case 4:
                         await CreateGame(log, service);
                         break;
                 }
@@ -122,7 +119,8 @@ namespace ServiceUtility
             // Get the game logs.
             GetGameLogsResponse response = await service.GetGameLogs(new GetGameLogsOptions() { GameId = game.Id });
 
-            if (!saveLogs)
+            log.Info();
+            if (GetDecission(log, "Would you like to print the logs or save them to your desktop (y=print; n=save)"))
             {
                 // Print the game.
                 log.Info();
@@ -152,6 +150,7 @@ namespace ServiceUtility
             }
             else
             {
+                log.Info();
                 // Save the logs to the folder given.
                 string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);// GetString(log, "Enter a folder path to write the logs to.");
                 log.Info($"Writing logs to {path}...");
@@ -229,9 +228,9 @@ namespace ServiceUtility
             log.Info($"State: {game.State}");
             log.Info($"Created By: {game.CreatedBy}");
             log.Info($"Created: {game.Created}");
-            log.Info($"Started: {(game.Started.HasValue ? (game.Created - game.Started.Value).TotalSeconds + "s" : "")}");
-            log.Info($"Game Engine Started: {(game.Started.HasValue ? (game.Created - game.Started.Value).TotalSeconds + "s" : "")}");
-            log.Info($"Ended: {(game.Started.HasValue ? (game.Created - game.Started.Value).TotalSeconds + "s" : "")}");
+            log.Info($"Started: {(game.Started.HasValue ? (game.Started.Value - game.Created).TotalSeconds + "s" : "")}");
+            log.Info($"Game Engine Started: {(game.GameEngineStarted.HasValue ? (game.GameEngineStarted.Value - game.Created).TotalSeconds + "s" : "")}");
+            log.Info($"Ended: {(game.Eneded.HasValue ? (game.Eneded.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Players:");
             log.IncreaseIndent();                       
             foreach (KokkaKoroPlayer player in game.Players)
@@ -251,7 +250,13 @@ namespace ServiceUtility
             log.Info($"{player.PlayerName}");
             log.IncreaseIndent();
             log.Info($"Is Bot: {player.IsBot}");
-            log.Info($"Bot Name: {player.BotDetails.Bot.Name}");
+            if (player.IsBot)
+            {
+                log.Info($"Bot: {player.BotDetails.Bot.Name}");
+                log.Info($"Version: {player.BotDetails.Bot.Major}.{player.BotDetails.Bot.Minor}.{player.BotDetails.Bot.Revision}");
+                log.Info($"State: {player.BotDetails.State}");
+                log.Info($"Error: {(String.IsNullOrWhiteSpace(player.BotDetails.IfErrorFatialError) ? "None" : player.BotDetails.IfErrorFatialError)}");
+            }
             log.DecreaseIndent();
         }
 
@@ -262,10 +267,8 @@ namespace ServiceUtility
             log.Info("##### GAMES ######");
             log.SetIndent(1);
             log.Info("1) List Games");
-            log.Info("2) Print Game Logs");
-            log.Info("3) Save Game Logs");
-            log.Info("4) Create Game");
-            log.Info("5) End Game");
+            log.Info("2) Get Game Logs");
+            log.Info("3) Create Game");
             log.SetIndent(0);
             log.Info("");
             log.Info("##### BOTS  ######");

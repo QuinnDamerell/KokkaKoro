@@ -59,22 +59,35 @@ namespace GameCommon.BuildingActivations
             {
                 throw GameErrorException.Create(state, ErrorTypes.InvalidState, $"GreenActivation was activated on the non-active player!", false, true);
             }
+                       
+            // We need to account for the shopping mall bonus if the player qualifies
+            int bonusAmount = 0;
+            string bonus = String.Empty;
+            if (stateHelper.Player.ShouldGetShoppingMallBonus(buildingIndex, playerIndexInvokedOn))
+            {
+                bonusAmount = 1;
+                bonus = " (bonus +1 coin from shopping mall)";
+            }
 
             // Do work
-            if(m_type == GreenCardType.Static)
+            if (m_type == GreenCardType.Static)
             {
-                p.Coins += m_amount;
+                int totalEarned = m_amount + bonusAmount;
+                p.Coins += totalEarned;
 
                 // Log it
-                log.Add(EarnIncomeDetails.Create(state, p.Name, playerIndexInvokedOn, b.GetName(), buildingIndex, m_amount));
+                log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalEarned} from a {b.GetName()}.{bonus}",
+                            new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = totalEarned, PlayerIndex = playerIndexInvokedOn }));
             }
             else if(m_type == GreenCardType.PerProduct)
             {
                 int count = stateHelper.Player.GetTotalProductionTypeBuilt(m_production, playerIndexInvokedOn);
-                int totalEarned = m_amount * count;
+                int totalEarned = (m_amount * count) + bonusAmount;
                 p.Coins += totalEarned;
 
-                log.Add(EarnIncomeDetails.Create(state, p.Name, playerIndexInvokedOn, b.GetName(), buildingIndex, totalEarned));
+                // Log it
+                log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalEarned} from a {b.GetName()}.{bonus}",
+                            new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = totalEarned, PlayerIndex = playerIndexInvokedOn }));
             }
             else
             {

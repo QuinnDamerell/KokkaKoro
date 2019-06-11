@@ -387,21 +387,38 @@ namespace GameCommon.StateHelpers
         }
 
         /// <summary>
-        /// Indicates if the given player has a shopping mall. If no index is given, the perspective user will be used.
+        /// Indicates if the given player and building qualify for the shopping mall +1 coin bonus. If no index is given, the perspective user will be used.
         /// </summary>
         /// <param name="userName"></param>
         /// <returns></returns>
-        public bool HasShoppingMall(int? playerIndex = null)
+        public bool ShouldGetShoppingMallBonus(int buildingIndex, int? playerIndex = null)
         {
+            // Validate
+            if(!m_baseHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            {
+                return false;
+            }
             GamePlayer p = GetPlayer(playerIndex);
             if (p == null)
             {
                 return false;
             }
-            // If the player owns a shopping mall, they get +1 for each cup and bread establishment.
-            return p.OwnedBuildings[BuildingRules.ShoppingMall] > 0;
-        }
 
+            // Check if the player has a shopping mall
+            if(p.OwnedBuildings[BuildingRules.ShoppingMall] == 0)
+            {
+                return false;
+            }
+
+            // Check if the building qualifies.
+            BuildingBase b = m_baseHelper.BuildingRules[buildingIndex];
+            if(b.GetEstablishmentProduction() == EstablishmentProduction.Bread || b.GetEstablishmentProduction() == EstablishmentProduction.Cup)
+            {
+                return true;
+            }
+            return false;
+        }
+               
         /// <summary>
         /// Given a building index and player, returns the count of building built. If no index is given, the perspective user will be used.
         /// </summary>

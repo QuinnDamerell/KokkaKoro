@@ -184,7 +184,7 @@ namespace GameCommon.StateHelpers
 
         public bool CanTakeAction(GameActionType type)
         {
-            return GetPossibleActions().Contains(type);
+            return type == GameActionType.Forfeit || GetPossibleActions().Contains(type);
         }
     }
 }

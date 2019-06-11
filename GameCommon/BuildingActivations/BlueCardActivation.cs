@@ -27,11 +27,20 @@ namespace GameCommon.BuildingActivations
             // Get common details and validate.
             (GamePlayer p, BuildingBase b) = GetDetailsAndValidate(state, stateHelper, "BlueCard", buildingIndex, playerIndexInvokedOn);
 
+            // We need to account for the shopping mall bonus if the player qualifies
+            int totalAmount = m_amount;
+            string bonus = String.Empty;
+            if (stateHelper.Player.ShouldGetShoppingMallBonus(buildingIndex, playerIndexInvokedOn))
+            {
+                totalAmount += 1;
+                bonus = " (bonus +1 coin from shopping mall)";
+            }
+
             // Add the coins to the player.
-            p.Coins += m_amount;
+            p.Coins += totalAmount;
 
             // Log it
-            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {m_amount} from a {b.GetName()}",
+            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalAmount} from a {b.GetName()}.{bonus}",
                         new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = m_amount, PlayerIndex = playerIndexInvokedOn }));                 
         }
 

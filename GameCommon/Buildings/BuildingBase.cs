@@ -99,7 +99,5 @@ namespace GameCommon.Buildings
             (int min, int max) = GetActivationRange();
             return diceValue >= min && diceValue <= max;
         }
-
-
     }
 }

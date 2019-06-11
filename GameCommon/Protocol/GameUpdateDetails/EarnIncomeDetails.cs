@@ -15,15 +15,5 @@ namespace GameCommon.Protocol.GameUpdateDetails
 
         // From which building
         public int BuildingIndex;
-
-        //
-        // Helpers
-        //
-        public static GameLog Create(GameState state, string playerName, int playerIndex, string buidlingName, int buildingIndex, int amountEarned, string customMessage = null)
-        {
-            // Log it
-            return GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, (String.IsNullOrEmpty(customMessage) ?  $"{playerName} earned {amountEarned} from a {buidlingName}" : customMessage),
-                        new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = amountEarned, PlayerIndex = playerIndex });
-        }
     }
 }

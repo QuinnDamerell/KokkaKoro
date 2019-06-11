@@ -770,19 +770,7 @@ namespace GameCore
                                 newSpecialActions.Add(type.Value);
                             }
                             ThrowIfInvalidState(stateHelper);
-                        }
-
-                        // If the player has a shopping mall, they get 1 extra coin per building for any activate cup or bread establishment.
-                        if(stateHelper.Player.HasShoppingMall() &&
-                            (building.GetEstablishmentProduction() == EstablishmentProduction.Bread || building.GetEstablishmentProduction() == EstablishmentProduction.Cup))
-                        {
-                            // Give them one coin for each building.
-                            stateHelper.Player.GetPlayer().Coins += built;
-
-                            // Log it
-                            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.EarnIncome, $"{stateHelper.Player.GetPlayer().Name} earned an extra {built} from a {building.GetName()}(s) because they have the shopping mall.",
-                                        new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = built, PlayerIndex = playerIndex }));
-                        }
+                        }                     
                     }
                 }
             }
