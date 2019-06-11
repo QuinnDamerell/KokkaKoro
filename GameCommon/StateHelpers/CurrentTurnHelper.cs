@@ -68,10 +68,10 @@ namespace GameCommon.StateHelpers
         }
 
 
-        public bool IsMyTurn(string userName = null)
+        public bool IsMyTurn(int? playerIndex = null)
         {
             GameState s = m_baseHelper.GetState();
-            return s.CurrentTurnState.PlayerIndex == m_baseHelper.Player.GetPlayer(userName).PlayerIndex;
+            return s.CurrentTurnState.PlayerIndex == m_baseHelper.Player.GetPlayer(playerIndex).PlayerIndex;
         }
 
         public bool CanRollOrReRoll()

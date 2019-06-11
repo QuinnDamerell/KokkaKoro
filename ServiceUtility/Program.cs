@@ -141,7 +141,7 @@ namespace ServiceUtility
                 log.Info("Bot Logs:");
                 foreach (KokkaKoroBotLog blog in response.BotLogs)
                 {
-                    log.Info($"Bot {blog.Player.BotName} - {blog.Player.PlayerName}");
+                    log.Info($"Bot {blog.Player.BotDetails.Bot.Name} - {blog.Player.PlayerName}");
                     log.Info(blog.StdOut);
                     log.Info(blog.StdErr);
                 }
@@ -227,9 +227,11 @@ namespace ServiceUtility
             log.IncreaseIndent();
             log.Info($"Id: {game.Id}");
             log.Info($"State: {game.State}");
-            log.Info($"Player Limit: {game.PlayerLimit}");
             log.Info($"Created By: {game.CreatedBy}");
             log.Info($"Created: {game.Created}");
+            log.Info($"Started: {(game.Started.HasValue ? (game.Created - game.Started.Value).TotalSeconds + "s" : "")}");
+            log.Info($"Game Engine Started: {(game.Started.HasValue ? (game.Created - game.Started.Value).TotalSeconds + "s" : "")}");
+            log.Info($"Ended: {(game.Started.HasValue ? (game.Created - game.Started.Value).TotalSeconds + "s" : "")}");
             log.Info($"Players:");
             log.IncreaseIndent();                       
             foreach (KokkaKoroPlayer player in game.Players)
@@ -249,7 +251,7 @@ namespace ServiceUtility
             log.Info($"{player.PlayerName}");
             log.IncreaseIndent();
             log.Info($"Is Bot: {player.IsBot}");
-            log.Info($"Bot Name: {player.BotName}");
+            log.Info($"Bot Name: {player.BotDetails.Bot.Name}");
             log.DecreaseIndent();
         }
 

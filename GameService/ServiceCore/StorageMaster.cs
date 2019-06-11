@@ -73,7 +73,8 @@ namespace GameService.ServiceCore
             try
             {
                 string localInfo = $"{localBotPath}/{c_botInfoFile}";
-                if (File.Exists(localInfo))
+                string localEntryDll = $"{localBotPath}/{info.EntryDll}";
+                if (File.Exists(localInfo) && File.Exists(localEntryDll))
                 {
                     KokkaKoroBot local = JsonConvert.DeserializeObject<KokkaKoroBot>(await File.ReadAllTextAsync(localInfo));
                     if(local.Equals(info))

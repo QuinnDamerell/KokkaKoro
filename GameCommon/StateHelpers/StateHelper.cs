@@ -48,6 +48,7 @@ namespace GameCommon.StateHelpers
         /// <param name="fromPerspectiveUserName"></param>
         internal StateHelper(GameState state, string fromPerspectiveUserName)
         {
+            m_state = state;
             Player = new PlayerHelper(this, fromPerspectiveUserName);
             CurrentTurn = new CurrentTurnHelper(this);
             Marketplace = new MarketplaceHelper(this);
@@ -55,8 +56,6 @@ namespace GameCommon.StateHelpers
             {
                 BuildingRules = new BuildingRules(state.Mode);
             }
-
-            m_state = state;
         }
 
         /// <summary>

@@ -98,8 +98,6 @@ namespace GameCore
                 {
                     // If this exception was thrown, it's most likely a bug.  
 
-                    Type t = e.GetType();
-
                     // Create an error and add it to the log.
                     GameError err = GameError.Create(m_state, ErrorTypes.Unknown, $"An exception was thrown while handling action. {e.Message}", false);
                     actionLog.Add(GameLog.CreateError(err));
@@ -167,10 +165,9 @@ namespace GameCore
             try
             {
                 // If we didn't get a state helper just make one. 
-                // Check for a winner shouldn't need the current player to work correctly.
                 if (stateHelper == null)
                 {
-                    stateHelper = m_state.GetStateHelper("");
+                    stateHelper = m_state.GetStateHelper(m_state.Players[m_state.CurrentTurnState.PlayerIndex].UserName);
                 }
 
                 // Create an empty state helper to check for a winner.
@@ -336,7 +333,8 @@ namespace GameCore
             }
 
             // Adding building to the marketplace
-            m_state.Market.ReplenishMarket(m_random, m_state.GetStateHelper(String.Empty));
+            string userName = m_state.Players[m_state.CurrentTurnState.PlayerIndex].UserName;
+            m_state.Market.ReplenishMarket(m_random, m_state.GetStateHelper(userName));
         }
 
         private void StartGame(List<GameLog> log, StateHelper stateHelper)
