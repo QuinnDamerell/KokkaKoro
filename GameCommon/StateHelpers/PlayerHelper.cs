@@ -6,19 +6,28 @@ using System.Text;
 
 namespace GameCommon.StateHelpers
 {
+    /// <summary>
+    /// Helper functions to answer player state questions.
+    /// </summary>
     public class PlayerHelper
     {
-        StateHelper m_gameHelper;
-        string m_perspectiveUserName;
+        readonly StateHelper m_baseHelper;
+        string m_perspectivePlayerUserName;
+        int m_perspectivePlayerIndex;
 
         internal PlayerHelper(StateHelper gameHelper, string fromPerspectiveUserName)
         {
-            m_gameHelper = gameHelper;
+            m_baseHelper = gameHelper;
+            SetPerspectiveUserName(fromPerspectiveUserName);
         }
 
+        /// <summary>
+        /// Ensures there are no state validations.
+        /// </summary>
+        /// <returns>Returns a string if there is an error.</returns>
         public string Validate()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             if(s.Players == null)
             {
                 return "Players object is null";
@@ -27,7 +36,7 @@ namespace GameCommon.StateHelpers
             {
                 return "There are no players";
             }
-            if(String.IsNullOrWhiteSpace(m_perspectiveUserName))
+            if(String.IsNullOrWhiteSpace(m_perspectivePlayerUserName))
             {
                 return "There is no perspective user name.";
             }
@@ -39,10 +48,9 @@ namespace GameCommon.StateHelpers
                 {
                     return "The player index doesn't match the list index.";
                 }
-                count++;
                 if (String.IsNullOrWhiteSpace(p.Name) || String.IsNullOrWhiteSpace(p.UserName))
                 {
-                    return "A user has a empty name or username.";
+                    return "A user has a empty name or user name.";
                 }
                 if (p.Coins < 0)
                 {
@@ -52,25 +60,35 @@ namespace GameCommon.StateHelpers
                 {
                     return $"Player {p.UserName} owned buildings object is null";
                 }
-                if(p.OwnedBuildings.Count != m_gameHelper.BuildingRules.GetCountOfUniqueTypes())
+                if(p.OwnedBuildings.Count != m_baseHelper.BuildingRules.GetCountOfUniqueTypes())
                 {
                     return $"Player {p.UserName}'s owned building list is too short";
                 }
-                if(p.UserName == m_perspectiveUserName)
+                if(p.UserName.Equals(m_perspectivePlayerUserName))
                 {
+                    if(m_perspectivePlayerIndex != count)
+                    {
+                        return $"The perspective player index in the state helper is incorrect.";
+                    }
                     matchedPerspective = true;
                 }
-                foreach(int i in p.OwnedBuildings)
+                for(int bi = 0; bi < m_baseHelper.BuildingRules.GetCountOfUniqueTypes(); bi++)
                 {
-                    if(i < 0)
+                    int numberOwned = p.OwnedBuildings[bi];
+                    if(numberOwned < 0)
                     {
-                        return $"Player {p.UserName}'s building count for building {i} is < 0";
+                        return $"Player {p.UserName}'s building count for building {bi} is < 0";
+                    }
+                    if (numberOwned > m_baseHelper.Marketplace.GetMaxBuildingsPerPlayer(bi))
+                    {
+                        return $"Player {p.UserName}'s building count for building {bi} is greater than the max that can be owned per player.";
                     }
                 }
+                count++;
             }
-            if(!matchedPerspective)
+            if (!matchedPerspective)
             {
-                return $"The perspective user name {m_perspectiveUserName} didn't match and player user names";
+                return $"The perspective user name {m_perspectivePlayerUserName} didn't match and player user names";
             }
             return null;
         }
@@ -82,115 +100,220 @@ namespace GameCommon.StateHelpers
         /// <returns></returns>
         public string GetPerspectiveUserName()
         {
-            return m_perspectiveUserName;
+            return m_perspectivePlayerUserName;
         }
 
         /// <summary>
-        /// Sets a new user perspective. 
+        /// Returns the player index of the perspective player the state helper is looking at.
         /// </summary>
-        /// <param name="newUserName"></param>
-        public void SetPerspectiveUserName(string newUserName)
+        /// <returns></returns>
+        public int GetPerspectivePlayerIndex()
         {
-            m_perspectiveUserName = newUserName;
+            return m_perspectivePlayerIndex;
         }
 
+        /// <summary>
+        /// Sets a new user perspective. If invalid the function will throw.
+        /// </summary>
+        /// <param name="newUserName">The perspective user name</param>
+        public void SetPerspectiveUserName(string playerUserName)
+        {
+            // Validate the user name
+            if(String.IsNullOrWhiteSpace(playerUserName))
+            {
+                throw GameErrorException.Create(m_baseHelper.GetState(), ErrorTypes.InvalidState, $"The player state helper was passed an invalid user name.", false);
+            }
+
+            // Reset the vars.
+            m_perspectivePlayerIndex = -1;
+            m_perspectivePlayerUserName = null;
+
+            // Find the user's index
+            GameState s = m_baseHelper.GetState();
+            for (int pi = 0; pi < s.Players.Count; pi++)
+            {
+                if (s.Players[pi].UserName.Equals(playerUserName))
+                {
+                    m_perspectivePlayerIndex = pi;
+                    break;
+                }
+            }
+
+            // Validate
+            if(m_perspectivePlayerIndex == -1)
+            {
+                throw GameErrorException.Create(m_baseHelper.GetState(), ErrorTypes.InvalidState, $"The player state helper was passed a user name that wasn't found in the player list.", false);
+            }
+
+            // Set the final var.
+            m_perspectivePlayerUserName = playerUserName;
+        }
+
+        #region General Questions
+
+        /// <summary>
+        /// Gets the count of players in the game.
+        /// </summary>
+        /// <returns></returns>
         public int GetPlayerCount()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.Players.Count;
         }
 
-        public int GetPlayerIndex(string userName = null)
+        /// <summary>
+        /// Validates that a player index is valid for this game.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns>true if it's ok; false if not</returns>
+        public bool ValidatePlayerIndex(int index)
         {
-            GamePlayer p = ValidatePlayer(userName);
-            if (p == null)
+            GameState s = m_baseHelper.GetState();
+            if (index < 0 || index >= s.Players.Count)
             {
-                return -1;
+                return false;
             }
+            return true;
+        }
 
-            GameState s = m_gameHelper.GetState();
-            for (int i = 0; i < s.Players.Count; i++)
+        /// <summary>
+        /// Validates is a player user name is valid for this game.
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <returns>True if it's valid; false otherwise.</returns>
+        public bool ValidatePlayer(string userName)
+        {
+            if(String.IsNullOrWhiteSpace(userName))
             {
-                if (s.Players[i].UserName.Equals(p.UserName))
+                return false;
+            }
+            GameState s = m_baseHelper.GetState();
+            foreach (GamePlayer p in s.Players)
+            {
+                if (p.UserName.Equals(userName))
                 {
-                    return i;
+                    return true;
                 }
             }
-            return -1;
+            return false;
         }
 
-        public string GetPlayerUserName(int? i = null)
+        /// <summary>
+        /// Checks if a player has won the game. 
+        /// </summary>
+        /// <returns>If a winner is found, the player is returned. Otherwise, null.</returns>
+        public GamePlayer CheckForWinner()
         {
-            int index = i.HasValue ? i.Value : -1;
-            if (!i.HasValue)
+            GameState s = m_baseHelper.GetState();
+            foreach (GamePlayer p in s.Players)
             {
-                index = GetPlayerIndex();
+                // If they own all of the landmarks, they win!
+                if (p.OwnedBuildings[BuildingRules.TrainStation] > 0
+                    && p.OwnedBuildings[BuildingRules.ShoppingMall] > 0
+                    && p.OwnedBuildings[BuildingRules.AmusementPark] > 0
+                    && p.OwnedBuildings[BuildingRules.RadioTower] > 0)
+                {
+                    return p;
+                }
             }
+            return null;
+        }
 
-            if (!ValidatePlayerIndex(index))
+        #endregion
+
+        #region Basic Player Specific 
+
+        /// <summary>
+        /// Gets a game player given a user name.
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public GamePlayer GetPlayer(string userName)
+        {
+            // Validate the user name
+            if(!ValidatePlayer(userName))
             {
                 return null;
             }
 
-            GameState s = m_gameHelper.GetState();   
-            return s.Players[index].UserName;
+            // Find the user and return them.
+            GameState s = m_baseHelper.GetState();
+            foreach(GamePlayer p in s.Players)
+            {
+                if(p.UserName.Equals(userName))
+                {
+                    return p;
+                }
+            }
+            return null;
         }
 
-        public string GetPlayerName(int? i = null)
+        /// <summary>
+        /// Gets a game player. If no argument is given, this returns the perspective player.
+        /// </summary>
+        /// <param name="playerIndex">If null, returns the perspective player.</param>
+        /// <returns></returns>
+        public GamePlayer GetPlayer(int? playerIndex = null)
         {
-            int index = i.HasValue ? i.Value : -1;
-            if (!i.HasValue)
-            {
-                index = GetPlayerIndex();
-            }
-
-            if (!ValidatePlayerIndex(index))
-            {
-                return null;
-            }
-
-            GameState s = m_gameHelper.GetState();
-            return s.Players[index].Name;
-        }
-
-        public GamePlayer GetPlayerFromIndex(int? playerIndex = null)
-        {
-            GameState s = m_gameHelper.GetState();
-
+            GameState s = m_baseHelper.GetState();
             if (!playerIndex.HasValue)
             {
-                int count = 0;
-                foreach(GamePlayer p in s.Players)
+                // Return the perspective player.
+                // These vars are safe to use as long as the object is valid.
+                return s.Players[m_perspectivePlayerIndex];
+            }
+            else
+            {
+                if(!ValidatePlayerIndex(playerIndex.Value))
                 {
-                    if(p.UserName.Equals(m_gameHelper.GetPerspectiveUserName()))
-                    {
-                        playerIndex = count;
-                        break;
-                    }
-                    count++;
+                    return null;
                 }
+                return s.Players[playerIndex.Value];
             }
-            if(!playerIndex.HasValue || !ValidatePlayerIndex(playerIndex.Value))
+        }
+
+        /// <summary>
+        /// Returns the user name of a player given an index. If no index is given, the perspective user will be used. 
+        /// </summary>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
+        public string GetPlayerUserName(int? playerIndex = null)
+        {
+            GamePlayer p = GetPlayer(playerIndex);
+            if(p == null)
             {
                 return null;
             }
-            return s.Players[playerIndex.Value];
+            return p.UserName;
         }
 
-        public GamePlayer GetPlayer(string userName = null)
+        /// <summary>
+        /// Returns the player name of a player given an index. If no index is given, the perspective user will be used. 
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        public string GetPlayerName(int? playerIndex = null)
         {
-            GameState s = m_gameHelper.GetState();
-            int index = GetPlayerIndex(userName);
-            if(index == -1)
+            GamePlayer p = GetPlayer(playerIndex);
+            if (p == null)
             {
                 return null;
             }
-            return s.Players[index];
+            return p.Name;
         }
 
-        public int GetMaxRollsAllowed(string userName = null)
+        #endregion
+
+        #region Player Game Stuff
+
+        /// <summary>
+        /// Returns the max amount of rolls for the given player. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
+        public int GetMaxRollsAllowed(int? playerIndex = null)
         {
-            GamePlayer p = GetPlayer(userName);
+            GamePlayer p = GetPlayer(playerIndex);
             if (p == null)
             {
                 return -1;
@@ -199,9 +322,14 @@ namespace GameCommon.StateHelpers
             return p.OwnedBuildings[BuildingRules.RadioTower] > 0 ? 2 : 1;
         }
 
-        public int GetMaxDiceCountCanRoll(string userName = null)
+        /// <summary>
+        /// Returns the max count of dice that the given player can roll. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
+        public int GetMaxCountOfDiceCanRoll(int? playerIndex = null)
         {
-            GamePlayer p = GetPlayer(userName);
+            GamePlayer p = GetPlayer(playerIndex);
             if(p == null)
             {
                 return -1;
@@ -210,17 +338,21 @@ namespace GameCommon.StateHelpers
             return p.OwnedBuildings[BuildingRules.TrainStation] > 0 ? 2 : 1;
         }
 
-        // Returns if the player can take another turn after their current turn.
-        public bool GetsExtraTurn(string userName = null)
+        /// <summary>
+        /// Returns if the given player can take another turn after their current turn. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
+        public bool CanHaveExtraTurn(int? playerIndex = null)
         {
-            GamePlayer p = GetPlayer(userName);
+            GamePlayer p = GetPlayer(playerIndex);
             if (p == null)
             {
                 return false;
             }
 
-            // Check if they rolled doubles
-            GameState s = m_gameHelper.GetState();
+            // Make sure they rolled doubles
+            GameState s = m_baseHelper.GetState();
             if (s.CurrentTurnState.DiceResults.Count < 2)
             {
                 return false;
@@ -254,10 +386,14 @@ namespace GameCommon.StateHelpers
             return p.OwnedBuildings[BuildingRules.AmusementPark] > 0;
         }
 
-        // Indicates if the player has a shopping mall.
-        public bool HasShoppingMall(string userName = null)
+        /// <summary>
+        /// Indicates if the given player has a shopping mall. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public bool HasShoppingMall(int? playerIndex = null)
         {
-            GamePlayer p = GetPlayer(userName);
+            GamePlayer p = GetPlayer(playerIndex);
             if (p == null)
             {
                 return false;
@@ -266,17 +402,22 @@ namespace GameCommon.StateHelpers
             return p.OwnedBuildings[BuildingRules.ShoppingMall] > 0;
         }
 
-        // Returns the number of buildings this player currently has built.
+        /// <summary>
+        /// Given a building index and player, returns the count of building built. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
         public int GetBuiltCount(int buildingIndex, int? playerIndex = null)
         {
             // Validate the building index
-            if (!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            if (!m_baseHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
             {
                 return -1;
             }
 
             // Get the player
-            GamePlayer p = GetPlayerFromIndex(playerIndex);
+            GamePlayer p = GetPlayer(playerIndex);
             if (p == null)
             {
                 return -1;
@@ -286,58 +427,49 @@ namespace GameCommon.StateHelpers
             return p.OwnedBuildings[buildingIndex];
         }
 
-        // Returns the number of buildings this player currently has built.
-        public int GetBuiltCount(int buildingIndex, string userName = null)
-        {
-            // Validate the building index
-            if (!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
-            {
-                return -1;
-            }
-
-            // Get the player
-            GamePlayer p = GetPlayer(userName);
-            if(p == null)
-            {
-                return -1;
-            }
-
-            // Get the building they own.
-            return p.OwnedBuildings[buildingIndex];
-        }
-
-        // Returns if the user can build another building type, or if they have hit the limit.
-        public bool HasReachedPerPlayerBuildingLimit(int buildingIndex, string userName = null)
+        /// <summary>
+        /// Given a building index and player index, returns true or false if the player has hit the limit of building they can build.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public bool HasReachedBuildingBuiltLimit(int buildingIndex, int? playerIndex = null)
         {
             // This will validate user name and building index.
-            int built = GetBuiltCount(buildingIndex, userName);
+            int built = GetBuiltCount(buildingIndex, playerIndex);
             if (built == -1)
             {
                 return true;
             }
-            if (built >= m_gameHelper.Marketplace.GetMaxBuildableBuildingsPerPlayer(buildingIndex))
+            if (built >= m_baseHelper.Marketplace.GetMaxBuildingsPerPlayer(buildingIndex))
             {
                 return true;
             }
             return false;
         }
 
-        public bool CanAffordBuilding(int buildingIndex, string userName = null)
+        /// <summary>
+        /// Given a building index and player index, return if the player can afford to buy a building.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public bool CanAffordBuilding(int buildingIndex, int? playerIndex = null)
         {
             // Validate the building index
-            if (!m_gameHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
+            if (!m_baseHelper.Marketplace.ValidateBuildingIndex(buildingIndex))
             {
                 return false;
             }
 
-            GamePlayer p = GetPlayer(userName);
+            GamePlayer p = GetPlayer(playerIndex);
             if(p == null)
             {
                 return false;
             }
 
             // Check if they have the coins to build it.
-            if (p.Coins < m_gameHelper.BuildingRules[buildingIndex].GetBuildCost())
+            if (p.Coins < m_baseHelper.BuildingRules[buildingIndex].GetBuildCost())
             {
                 return false;
             }
@@ -345,10 +477,45 @@ namespace GameCommon.StateHelpers
             return true;
         }
 
+        /// <summary>
+        /// Given a building index and player index, returns if the player can building the given building. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public bool CanBuildBuilding(int buildingIndex, int? playerIndex = null)
+        {
+            // Check if we can afford it.
+            // (this will validate the index and user name)
+            if(!CanAffordBuilding(buildingIndex, playerIndex))
+            {
+                return false;
+            }         
+
+            // Check if it's available in the marketplace.
+            if(!m_baseHelper.Marketplace.IsBuildableFromMarketplace(buildingIndex))
+            {
+                return false;
+            }
+
+            // Last, check if the player already has the per player building limit.
+            if(HasReachedBuildingBuiltLimit(buildingIndex, playerIndex))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Given a desired max and player index, returns the max amount of coins that can be take from this player. If no index is given, the perspective user will be used.
+        /// </summary>
+        /// <param name="desiredAmount"></param>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
         public int GetMaxTakeableCoins(int desiredAmount, int? playerIndex = null)
         {
             // Get the player
-            GamePlayer p = GetPlayerFromIndex(playerIndex);
+            GamePlayer p = GetPlayer(playerIndex);
             if (p == null)
             {
                 return -1;
@@ -358,44 +525,30 @@ namespace GameCommon.StateHelpers
             return Math.Min(desiredAmount, p.Coins);
         }
 
-        public bool CanBuildBuilding(int buildingIndex, string userName = null)
-        {
-            // Check if we can afford it.
-            // (this will validate the index and user name)
-            if(!CanAffordBuilding(buildingIndex, userName))
-            {
-                return false;
-            }         
-
-            // Check if it's available in the marketplace.
-            if(!m_gameHelper.Marketplace.IsBuildableFromMarketplace(buildingIndex))
-            {
-                return false;
-            }
-
-            // Last, check if the player already has the per player building limit.
-            if(HasReachedPerPlayerBuildingLimit(buildingIndex, userName))
-            {
-                return false;
-            }
-            return true;
-        }
-
-        // Returns if there are any building that are buildable from the marketplace and we can afford.
-        public bool AreMarketplaceBuildableBuildingsAvailableThatCanAfford(string userName = null)
+        /// <summary>
+        /// Given player index, returns if there are that are affordable and available to build from the marketplace.
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public bool AreAvailableBuildingsThatWeCanAfford(int? playerIndex = null)
         {
             // Get all building that are in the marketplace.
-            List<int> buildable = m_gameHelper.Marketplace.GetBuildingTypesBuildableInMarketplace();
+            List<int> buildable = m_baseHelper.Marketplace.GetBuildingTypesBuildableInMarketplace();
 
             // See if there are any we can afford.
-            return FilterBuildingIndexsWeCanAfford(buildable, userName).Count > 0;
+            return FilterBuildingIndexesWeCanAfford(buildable, playerIndex).Count > 0;
         }
 
-        // Gets a list of building indexes that the player can afford and are buildable. available 
-        public List<int> FilterBuildingIndexsWeCanAfford(List<int> buildingIndexes, string userName = null)
+        /// <summary>
+        /// Given player index, returns a list of building indexes that are affordable and available to build from the marketplace.
+        /// </summary>
+        /// <param name="buildingIndexes"></param>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
+        public List<int> FilterBuildingIndexesWeCanAfford(List<int> buildingIndexes, int? playerIndex = null)
         {
             List<int> canAffordAndBuildable = new List<int>();
-            GamePlayer p = GetPlayer(userName);
+            GamePlayer p = GetPlayer(playerIndex);
             if(p == null)
             {
                 return canAffordAndBuildable;
@@ -404,76 +557,33 @@ namespace GameCommon.StateHelpers
             foreach(int b in buildingIndexes)
             {
                 // Filter out only the ones we can afford and haven't bought too many of.
-                if(CanAffordBuilding(b, userName) && !HasReachedPerPlayerBuildingLimit(b, userName))
+                if(CanAffordBuilding(b, playerIndex) && !HasReachedBuildingBuiltLimit(b, playerIndex))
                 {
                     canAffordAndBuildable.Add(b);
                 }
             }
             return canAffordAndBuildable;
-        }
+        }  
 
-        public bool ValidatePlayerIndex(int index = -1)
-        {
-            GameState s = m_gameHelper.GetState();
-            if (index < 0 || index >= s.Players.Count)
-            {
-                return false;
-            }
-            return true;
-        }
-
-        public GamePlayer ValidatePlayer(string userName = null)
-        {
-            // Get the correct user name.
-            userName = userName == null ? m_gameHelper.GetPerspectiveUserName() : userName;
-
-            GameState s = m_gameHelper.GetState();
-            foreach(GamePlayer p in s.Players)
-            {
-                if(p.UserName.Equals(userName))
-                {
-                    return p;
-                }
-            }
-            return null;
-        }
-
-        // Returns null if no winner was found, otherwise the winning player.
-        public GamePlayer CheckForWinner()
-        {
-            GameState s = m_gameHelper.GetState();
-            foreach (GamePlayer p in s.Players)
-            {
-                // If they own all of the landmarks, they win!
-                if (p.OwnedBuildings[BuildingRules.TrainStation] > 0
-                    && p.OwnedBuildings[BuildingRules.ShoppingMall] > 0
-                    && p.OwnedBuildings[BuildingRules.AmusementPark] > 0
-                    && p.OwnedBuildings[BuildingRules.RadioTower] > 0)
-                {
-                    return p;
-                }
-            }
-            return null;
-        }
-
-        // Returns the count of buildings built by the player that have the given production type.
+        /// <summary>
+        /// Given a production type and player index, returns the count of buildings the player has that build that matches the production type.
+        /// </summary>
+        /// <param name="production"></param>
+        /// <param name="playerIndex"></param>
+        /// <returns></returns>
         public int GetTotalProductionTypeBuilt(EstablishmentProduction production, int? playerIndex = null)
         {
-            if(!playerIndex.HasValue)
-            {
-                playerIndex = GetPlayerIndex();
-            }
-            if(!ValidatePlayerIndex(playerIndex.Value))
+            GamePlayer p = GetPlayer(playerIndex);
+            if(p == null)
             {
                 return -1;
             }
 
             // Count the building count for the given production.
-            GameState s = m_gameHelper.GetState();
             int total = 0;
-            for (int buildingIndex = 0; buildingIndex < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); buildingIndex++)
+            for (int buildingIndex = 0; buildingIndex < m_baseHelper.BuildingRules.GetCountOfUniqueTypes(); buildingIndex++)
             {
-                BuildingBase b = m_gameHelper.BuildingRules[buildingIndex];
+                BuildingBase b = m_baseHelper.BuildingRules[buildingIndex];
                 if(b.GetEstablishmentProduction() == production)
                 {
                     total += GetBuiltCount(buildingIndex, playerIndex);
@@ -481,6 +591,8 @@ namespace GameCommon.StateHelpers
             }
             return total;
         }
+
+        #endregion
     }
 }
 

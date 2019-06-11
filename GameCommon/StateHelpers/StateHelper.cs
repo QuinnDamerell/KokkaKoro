@@ -6,8 +6,8 @@ namespace GameCommon.StateHelpers
 {
     /// <summary>
     /// State helper is a read-only class that helps answer current state questions.
-    /// The state helper takes a perspective username, any functions called without specifying the user
-    /// will assume the perspective username.
+    /// The state helper takes a perspective user name, any functions called without specifying the user
+    /// will assume the perspective user name.
     /// </summary>
     public class StateHelper
     {
@@ -16,17 +16,17 @@ namespace GameCommon.StateHelpers
         //
 
         /// <summary>
-        /// Helpers for player stuff
+        /// Helper functions to answer player questions.
         /// </summary>
         public PlayerHelper Player;
 
         /// <summary>
-        /// Helpers for current turn stuff
+        /// Helper functions to answer current turn questions.
         /// </summary>
         public CurrentTurnHelper CurrentTurn;
 
         /// <summary>
-        /// Helpers for the marketplace
+        /// Helper functions to answer marketplace questions.
         /// </summary>
         public MarketplaceHelper Marketplace;
 
@@ -87,7 +87,7 @@ namespace GameCommon.StateHelpers
             {
                 return "There are no players";
             }
-            if(Player.GetPlayerIndex() == -1)
+            if(Player.GetPlayer() == null)
             {
                 return "The given perspective user name wasn't found in the players.";
             }

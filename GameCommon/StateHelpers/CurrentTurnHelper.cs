@@ -6,23 +6,30 @@ using System.Text;
 
 namespace GameCommon.StateHelpers
 {
+    /// <summary>
+    /// Helper functions to answer state questions.
+    /// </summary>
     public class CurrentTurnHelper
     {
-        StateHelper m_gameHelper;
+        readonly StateHelper m_baseHelper;
 
         internal CurrentTurnHelper(StateHelper gameHelper)
         {
-            m_gameHelper = gameHelper;
+            m_baseHelper = gameHelper;
         }
 
+        /// <summary>
+        /// Validates everything is correct.
+        /// </summary>
+        /// <returns>If there's an error, returns a string.</returns>
         public string Validate()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             if (s.CurrentTurnState.PlayerIndex < 0 || s.CurrentTurnState.PlayerIndex >= s.Players.Count)
             {
                 return "Current turn state player index is out of bounds.";
             }
-            if (s.CurrentTurnState.Rolls < 0 || s.CurrentTurnState.Rolls > m_gameHelper.Player.GetMaxRollsAllowed())
+            if (s.CurrentTurnState.Rolls < 0 || s.CurrentTurnState.Rolls > m_baseHelper.Player.GetMaxRollsAllowed())
             {
                 return "The current turn state rolls is to high or low for the current player.";
             }
@@ -30,7 +37,7 @@ namespace GameCommon.StateHelpers
             {
                 return "The current turn has rolls but no dice value.";
             }
-            if(s.CurrentTurnState.DiceResults.Count > m_gameHelper.Player.GetMaxDiceCountCanRoll())
+            if(s.CurrentTurnState.DiceResults.Count > m_baseHelper.Player.GetMaxCountOfDiceCanRoll())
             {
                 return "There are more dice results than then player can currently roll dice.";
             }
@@ -60,64 +67,65 @@ namespace GameCommon.StateHelpers
             return null;
         }
 
+
         public bool IsMyTurn(string userName = null)
         {
-            GameState s = m_gameHelper.GetState();
-            return s.CurrentTurnState.PlayerIndex == m_gameHelper.Player.GetPlayerIndex(userName);
+            GameState s = m_baseHelper.GetState();
+            return s.CurrentTurnState.PlayerIndex == m_baseHelper.Player.GetPlayer(userName).PlayerIndex;
         }
 
         public bool CanRollOrReRoll()
         {
-            GameState s = m_gameHelper.GetState();
-            return !HasEndedTurn() && !HasCommittedToDiceResult() && s.CurrentTurnState.Rolls < m_gameHelper.Player.GetMaxRollsAllowed();
+            GameState s = m_baseHelper.GetState();
+            return !HasEndedTurn() && !HasCommittedToDiceResult() && s.CurrentTurnState.Rolls < m_baseHelper.Player.GetMaxRollsAllowed();
         }
 
         public bool HasBuildABuiding()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.CurrentTurnState.HasBougthBuilding;
         }
 
         public bool HasCommittedToDiceResult()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.CurrentTurnState.HasCommitedDiceResult;
         }
 
         public bool HasEndedTurn()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.CurrentTurnState.HasEndedTurn;
         }
 
         public string GetActiveTurnPlayerUserName()
         {
-            GameState s = m_gameHelper.GetState();
-            return m_gameHelper.Player.GetPlayerUserName(s.CurrentTurnState.PlayerIndex);
+            GameState s = m_baseHelper.GetState();
+            return m_baseHelper.Player.GetPlayerUserName(s.CurrentTurnState.PlayerIndex);
         }
 
         public bool HasGameEnded()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.CurrentTurnState.HasGameEnded;
         }
 
         public bool HasGameStarted()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.CurrentTurnState.HasGameStarted;
         }
 
         public bool HasPendingSpecialActions()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.CurrentTurnState.SpecialActions.Count > 0;
         }
 
         public List<GameActionType> GetPossibleActions()
         {
             List<GameActionType> actions = new List<GameActionType>();
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
 
             // If there are any special actions for the current player, they must be resolved first.
             // If there are multiple, we need to resolve them in the order they are listed.
@@ -159,7 +167,7 @@ namespace GameCommon.StateHelpers
             if(!HasBuildABuiding())
             {
                 // ... check if there are building they can afford in the marketplace currently.
-                if(m_gameHelper.Player.AreMarketplaceBuildableBuildingsAvailableThatCanAfford())
+                if(m_baseHelper.Player.AreAvailableBuildingsThatWeCanAfford())
                 {
                     // If so give them the option.
                     actions.Add(GameActionType.BuildBuilding);

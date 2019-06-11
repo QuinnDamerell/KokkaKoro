@@ -53,7 +53,7 @@ namespace GameCommon.BuildingActivations
             }
 
             // Get the swap player.
-            GamePlayer sacrificePlayer = stateHelper.Player.GetPlayerFromIndex(options.PlayerIndexToSwapWith);
+            GamePlayer sacrificePlayer = stateHelper.Player.GetPlayer(options.PlayerIndexToSwapWith);
 
             // Validate.
             if (activePlayer.PlayerIndex == sacrificePlayer.PlayerIndex)

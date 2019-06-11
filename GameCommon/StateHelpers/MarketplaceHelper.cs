@@ -8,16 +8,20 @@ namespace GameCommon.StateHelpers
 {
     public class MarketplaceHelper
     {
-        StateHelper m_gameHelper;
+        readonly StateHelper m_baseHelper;
 
         internal MarketplaceHelper(StateHelper gameHelper)
         {
-            m_gameHelper = gameHelper;
+            m_baseHelper = gameHelper;
         }
 
+        /// <summary>
+        /// Validates the marketplace to make sure there are no errors.
+        /// </summary>
+        /// <returns>If errors are found, returns a string.</returns>
         public string Validate()
         {
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             if(s.Market == null)
             {
                 return "Market it null";
@@ -30,7 +34,7 @@ namespace GameCommon.StateHelpers
             {
                 return "Market's AvailableBuildable is null";
             }
-            if(s.Market.AvailableBuildable.Count != m_gameHelper.BuildingRules.GetCountOfUniqueTypes())
+            if(s.Market.AvailableBuildable.Count != m_baseHelper.BuildingRules.GetCountOfUniqueTypes())
             {
                 return "Market's AvailableBuildable is smaller than building rules.";
             }
@@ -41,80 +45,94 @@ namespace GameCommon.StateHelpers
                     return $"Market's building index {i} has a negative value";
                 }
             }
-            for(int i = 0; i < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); i++)
+            for(int i = 0; i < m_baseHelper.BuildingRules.GetCountOfUniqueTypes(); i++)
             {
-                if(m_gameHelper.BuildingRules[i].GetBuildingIndex() != i)
+                BuildingBase b = m_baseHelper.BuildingRules[i];
+                if(b.GetBuildingIndex() != i)
                 {
                     return $"Building rules index {i} has an incorrect GetBuldingIndex()";
                 }
             }
-            if(m_gameHelper.BuildingRules.GetCountOfUniqueTypes() < 14
-                || !(m_gameHelper.BuildingRules[BuildingRules.WheatField] is WheatField)
-                || !(m_gameHelper.BuildingRules[BuildingRules.Ranch] is Ranch)
-                || !(m_gameHelper.BuildingRules[BuildingRules.Bakery] is Bakery)
-                || !(m_gameHelper.BuildingRules[BuildingRules.ConvenienceStore] is ConvenienceStore)
-                || !(m_gameHelper.BuildingRules[BuildingRules.Forest] is Forest)
-                || !(m_gameHelper.BuildingRules[BuildingRules.CheeseFactory] is CheeseFactory)
-                || !(m_gameHelper.BuildingRules[BuildingRules.FurnitureFactory] is FurnitureFactory)
-                || !(m_gameHelper.BuildingRules[BuildingRules.Mine] is Mine)
-                || !(m_gameHelper.BuildingRules[BuildingRules.AppleOrchard] is AppleOrchard)
-                || !(m_gameHelper.BuildingRules[BuildingRules.FarmersMarket] is FarmersMarket)
-                || !(m_gameHelper.BuildingRules[BuildingRules.TrainStation] is TrainStation)
-                || !(m_gameHelper.BuildingRules[BuildingRules.ShoppingMall] is ShoppingMall)
-                || !(m_gameHelper.BuildingRules[BuildingRules.RadioTower] is RadioTower)
-                || !(m_gameHelper.BuildingRules[BuildingRules.AmusementPark] is AmusementPark))
+            if(m_baseHelper.BuildingRules.GetCountOfUniqueTypes() < 14
+                || !(m_baseHelper.BuildingRules[BuildingRules.WheatField] is WheatField)
+                || !(m_baseHelper.BuildingRules[BuildingRules.Ranch] is Ranch)
+                || !(m_baseHelper.BuildingRules[BuildingRules.Bakery] is Bakery)
+                || !(m_baseHelper.BuildingRules[BuildingRules.ConvenienceStore] is ConvenienceStore)
+                || !(m_baseHelper.BuildingRules[BuildingRules.Forest] is Forest)
+                || !(m_baseHelper.BuildingRules[BuildingRules.CheeseFactory] is CheeseFactory)
+                || !(m_baseHelper.BuildingRules[BuildingRules.FurnitureFactory] is FurnitureFactory)
+                || !(m_baseHelper.BuildingRules[BuildingRules.Mine] is Mine)
+                || !(m_baseHelper.BuildingRules[BuildingRules.AppleOrchard] is AppleOrchard)
+                || !(m_baseHelper.BuildingRules[BuildingRules.FarmersMarket] is FarmersMarket)
+                || !(m_baseHelper.BuildingRules[BuildingRules.TrainStation] is TrainStation)
+                || !(m_baseHelper.BuildingRules[BuildingRules.ShoppingMall] is ShoppingMall)
+                || !(m_baseHelper.BuildingRules[BuildingRules.RadioTower] is RadioTower)
+                || !(m_baseHelper.BuildingRules[BuildingRules.AmusementPark] is AmusementPark))
             {
                 return $"Building rules mismatch between building constants and object type.";
             }
             return null;
         }
 
-        // Validates that a building index is valid.
+        /// <summary>
+        /// Validates the given building index.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public bool ValidateBuildingIndex(int buildingIndex)
         {
-            if (buildingIndex < 0 || buildingIndex >= m_gameHelper.BuildingRules.GetCountOfUniqueTypes())
+            if (buildingIndex < 0 || buildingIndex >= m_baseHelper.BuildingRules.GetCountOfUniqueTypes())
             {
                 return false;
             }
             return true;
         }
 
-        // Returns the max number of buildings of the given type that can be built in the game.
-        // The value includes the correct number of starting buildings for buildings that are starting buildings.
-        public int GetMaxBuildableBuildingsInGame(int buildingIndex)
+        /// <summary>
+        /// Returns the max number of buildings that can be built in the game given the building type.
+        /// The value includes the correct number of starting buildings for buildings that are starting buildings.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
+        public int GetMaxBuildingsInGame(int buildingIndex)
         {
             BuildingBase b = GetBuildingRules(buildingIndex);
-            GameState s = m_gameHelper.GetState();
             if (b == null)
             {
                 return -1;
             }
 
+            GameState s = m_baseHelper.GetState();
+
             // Get the max building allowed to be built in any game.
-            int count = m_gameHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountInGame();
+            int count = m_baseHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountInGame();
+
             // Then if this is a starting building, add the number of players since they all have one.
             count += b.IsStartingBuilding() ? s.Players.Count : 0;
             return count;
         }
 
-        // Returns the max number of buildable buildings given a building index that can be built per player in a given game.
-        public int GetMaxBuildableBuildingsPerPlayer(int buildingIndex)
+        /// <summary>
+        /// Returns the max number of buildings that can be build per player.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
+        public int GetMaxBuildingsPerPlayer(int buildingIndex)
         {
             BuildingBase b = GetBuildingRules(buildingIndex);
-            GameState s = m_gameHelper.GetState();
             if (b == null)
             {
                 return -1;
             }
 
             // Get the max building allowed to be build by a player.
-            int count = m_gameHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountPerPlayer();
+            int count = m_baseHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountPerPlayer();
 
             // If negative one, it means it's the same as the max buildable in the game.
             if(count == -1)
             {
                 // Note we want to buildable value here excluding starting building modifiers since that dependent on player numbers.
-                count = m_gameHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountInGame();
+                count = m_baseHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountInGame();
 
                 // But if it's a starting building, than the per player limit is the max count + 1.
                 if(b.IsStartingBuilding())
@@ -125,11 +143,14 @@ namespace GameCommon.StateHelpers
             return count;
         }
 
-        // Returns the current count of built buildings by players in the current game.
+        /// <summary>
+        /// Returns the current count of built buildings by players in the current game.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public int GetBuiltBuildingsInCurrentGame(int buildingIndex)
         {
             BuildingBase b = GetBuildingRules(buildingIndex);
-            GameState s = m_gameHelper.GetState();
             if (b == null)
             {
                 return -1;
@@ -137,60 +158,86 @@ namespace GameCommon.StateHelpers
 
             //  Total the number of buildings each player has.
             int sum = 0;
-            foreach(GamePlayer p in s.Players)
+            GameState s = m_baseHelper.GetState();
+            foreach (GamePlayer p in s.Players)
             {
                 sum += p.OwnedBuildings[buildingIndex];
             }
             return sum;
         }
 
-        // Returns how many buildings of the given type are still buildable by players in the game.
+        /// <summary>
+        /// Returns how many buildings of the given type are still buildable by players in the game.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public int GetBuildableInCurrentGame(int buildingIndex)
         {
-            return GetMaxBuildableBuildingsInGame(buildingIndex) - GetBuiltBuildingsInCurrentGame(buildingIndex);
+            return GetMaxBuildingsInGame(buildingIndex) - GetBuiltBuildingsInCurrentGame(buildingIndex);
         }
 
-        // Returns how many buildings of the given type are buildable by players in the marketplace.
+        /// <summary>
+        /// Returns how many buildings of the given type are buildable in the marketplace.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public int GetBuildableFromMarketplace(int buildingIndex)
         {
             if(!ValidateBuildingIndex(buildingIndex))
             {
                 return -1;
             }
-            GameState s = m_gameHelper.GetState();
+            GameState s = m_baseHelper.GetState();
             return s.Market.AvailableBuildable[buildingIndex];
         }
 
-        // Returns if a a building index is currently buildable from the marketplace.
+        /// <summary>
+        /// Returns if a a building index is still buildable in the current game.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public bool IsBuildableInCurrentGame(int buildingIndex)
         {
             return GetBuildableInCurrentGame(buildingIndex) > 0;
         }
 
-        // Returns if a a building index is currently buildable from the marketplace.
+        /// <summary>
+        /// Returns if a a building index is currently buildable from the marketplace.
+        /// </summary>
+        /// <param name="buildingIndex"></param>
+        /// <returns></returns>
         public bool IsBuildableFromMarketplace(int buildingIndex)
         {
             return GetBuildableFromMarketplace(buildingIndex) > 0;
-        }   
+        }
 
-        // Returns the number of unique building types (bakery, wheat field, etc) that are still available to be built
-        // by players in the game.
+        /// <summary>
+        /// Returns the number of unique building types (bakery, wheat field, etc) that are still available to be built
+        /// by players in the game.
+        /// </summary>
+        /// <returns></returns>
         public int GetCountOfBuildingTypesBuildableInCurrentGame()
         {
             return GetBuildingTypesBuildableInCurrentGame().Count;
         }
 
-        // Returns the number of building types are available to build in the marketplace.
+        /// <summary>
+        /// Returns the number of building types are available to build in the marketplace.
+        /// </summary>
+        /// <returns></returns>
         public int GetCountOfBuildingTypesStillBuildableInMarketplace()
         {
             return GetBuildingTypesBuildableInMarketplace().Count;
         }
 
-        // Returns a list of building indexes that are still buildable in the game.
+        /// <summary>
+        /// Returns a list of building indexes that are still buildable in the game.
+        /// </summary>
+        /// <returns></returns>
         public List<int> GetBuildingTypesBuildableInCurrentGame()
         {
             List<int> buildings = new List<int>();
-            for (int b = 0; b < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
+            for (int b = 0; b < m_baseHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
             {
                 if (GetBuildableInCurrentGame(b) > 0)
                 {
@@ -200,11 +247,14 @@ namespace GameCommon.StateHelpers
             return buildings;
         }
 
-        // Returns a list of building indexes that are current buildable from the marketplace.
+        /// <summary>
+        /// Returns a list of building indexes that are current buildable from the marketplace.
+        /// </summary>
+        /// <returns></returns>
         public List<int> GetBuildingTypesBuildableInMarketplace()
         {
             List<int> buildings = new List<int>();
-            for (int b = 0; b < m_gameHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
+            for (int b = 0; b < m_baseHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
             {
                 if (GetBuildableFromMarketplace(b) > 0)
                 {
@@ -220,7 +270,7 @@ namespace GameCommon.StateHelpers
             {
                 return null;
             }
-            return m_gameHelper.BuildingRules[buildingIndex];
+            return m_baseHelper.BuildingRules[buildingIndex];
         }
     }
 }

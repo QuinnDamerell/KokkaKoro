@@ -46,7 +46,7 @@ namespace GameCommon.BuildingActivations
 
             // Get players
             GamePlayer activePlayer = stateHelper.Player.GetPlayer();
-            GamePlayer sacrificePlayer = stateHelper.Player.GetPlayerFromIndex(options.PlayerIndexToTakeFrom);
+            GamePlayer sacrificePlayer = stateHelper.Player.GetPlayer(options.PlayerIndexToTakeFrom);
 
             // Validate player.
             if(activePlayer.PlayerIndex == sacrificePlayer.PlayerIndex)

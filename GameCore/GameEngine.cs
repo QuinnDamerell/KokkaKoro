@@ -359,8 +359,8 @@ namespace GameCore
         private void ValidateUserTurn(GameAction<object> action, StateHelper stateHelper)
         {
             // Next make sure we have a user and it's their turn.
-            int playerIndex = stateHelper.Player.GetPlayerIndex();
-            if(playerIndex == -1)
+            GamePlayer player = stateHelper.Player.GetPlayer();
+            if(player.PlayerIndex == -1)
             {
                 throw GameErrorException.Create(m_state, ErrorTypes.PlayerUserNameNotFound, $"`{stateHelper.Player.GetPlayerUserName()}` user name wasn't found in this game.", false, false);
             }
@@ -398,7 +398,7 @@ namespace GameCore
             newPlayerIndex++;
 
             // Check if the player has the amusement park and rolled doubles, they get to take another turn.
-            if (stateHelper.Player.GetsExtraTurn())
+            if (stateHelper.Player.CanHaveExtraTurn())
             {
                 // If so, set them to be the player again.
                 newPlayerIndex = m_state.CurrentTurnState.PlayerIndex;
@@ -419,7 +419,7 @@ namespace GameCore
             m_state.CurrentTurnState.Clear(newPlayerIndex);
 
             // It's also super important to update the state helper with the new user perspective.
-            stateHelper.SetPerspectiveUserName(stateHelper.Player.GetPlayerUserName(newPlayerIndex));
+            stateHelper.Player.SetPerspectiveUserName(stateHelper.Player.GetPlayerUserName(newPlayerIndex));
         }
 
         private void BuildPlayerActionRequest(List<GameLog> log, StateHelper stateHelper)
@@ -458,9 +458,9 @@ namespace GameCore
             {
                 throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"Number of dice to roll must be > 0", true, false);
             }
-            if (options.DiceCount > stateHelper.Player.GetMaxDiceCountCanRoll())
+            if (options.DiceCount > stateHelper.Player.GetMaxCountOfDiceCanRoll())
             {
-                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.GetMaxDiceCountCanRoll()} currently.", true, false);
+                throw GameErrorException.Create(m_state, ErrorTypes.InvalidActionOptions, $"This player can't roll that many dice; they have a max of {stateHelper.Player.GetMaxCountOfDiceCanRoll()} currently.", true, false);
             }
 
             // Roll the dice!
@@ -476,7 +476,7 @@ namespace GameCore
 
             // Create an update
             log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.RollDiceResult, $"Player {stateHelper.Player.GetPlayerName()} rolled {sum}.",
-                new RollDiceDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayerIndex() }));
+                new RollDiceDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayer().PlayerIndex }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
@@ -523,7 +523,7 @@ namespace GameCore
             rollStr += "]";
 
             log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.CommitDiceResults, $"Player {stateHelper.Player.GetPlayerName()} committed their roll of {rollStr} after {m_state.CurrentTurnState.Rolls} rolls.",
-                new CommitDiceResultsDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayerIndex(), Rolls = m_state.CurrentTurnState.Rolls }));
+                new CommitDiceResultsDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayer().PlayerIndex, Rolls = m_state.CurrentTurnState.Rolls }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
@@ -560,7 +560,7 @@ namespace GameCore
                 {
                     throw GameErrorException.Create(m_state, ErrorTypes.NotEnoughFunds, $"The player doesn't have enough coins to build the requested building type.", true);
                 }
-                else if(stateHelper.Player.HasReachedPerPlayerBuildingLimit(options.BuildingIndex))
+                else if(stateHelper.Player.HasReachedBuildingBuiltLimit(options.BuildingIndex))
                 {
                     throw GameErrorException.Create(m_state, ErrorTypes.PlayerMaxBuildingLimitReached, $"The player has reached the per player building limit.", true);
                 }
@@ -573,7 +573,7 @@ namespace GameCore
             // Make the transaction.
 
             // Take the player's coins.
-            GamePlayer p = stateHelper.Player.GetPlayer(null);
+            GamePlayer p = stateHelper.Player.GetPlayer();
             p.Coins -= stateHelper.BuildingRules[options.BuildingIndex].GetBuildCost();
 
             // Add the building to the player.
@@ -587,7 +587,7 @@ namespace GameCore
             
             // Create an update
             log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.BuildBuilding, $"Player {stateHelper.Player.GetPlayerName()} built a {stateHelper.BuildingRules[options.BuildingIndex].GetName()}.",
-                new BuildBuildingDetails() { PlayerIndex = stateHelper.Player.GetPlayerIndex(), BuildingIndex = options.BuildingIndex }));
+                new BuildBuildingDetails() { PlayerIndex = p.PlayerIndex, BuildingIndex = options.BuildingIndex }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
