@@ -10,6 +10,11 @@ using Newtonsoft.Json;
 
 namespace GameService.ServiceCore
 {
+    public class BotNotFound : Exception
+    {
+        public BotNotFound(string msg) : base(msg) { }
+    }
+
     public class StorageMaster
     {
         static readonly string c_blobBotBase = "Bots";
@@ -38,14 +43,14 @@ namespace GameService.ServiceCore
             // Check for items and the main exe.
             if (items.Count == 0)
             {
-                throw new Exception("No files found for the requested bot.");
+                throw new BotNotFound("No files found for the requested bot.");
             }
 
             // Find the bot info
             List<KokkaKoroBot> infos = await GetBotInfos(items);
             if(infos.Count != 1)
             {
-                throw new Exception("No or many bot info files found");
+                throw new BotNotFound("No or many bot info files found");
             }
             KokkaKoroBot info = infos[0];
 
@@ -172,6 +177,37 @@ namespace GameService.ServiceCore
                 token = result.ContinuationToken;
             }
             return items;
+        }
+
+        public void CopyTempBotToLocal(string pathToTempDir, KokkaKoroBot bot)
+        {
+            string localPath = $"{c_blobBotBase}/{bot.Name}/";
+            if (Directory.Exists(localPath))
+            {
+                Directory.Delete(localPath, true);
+            }
+            Directory.CreateDirectory(localPath);
+            foreach(string file in Directory.EnumerateFiles(pathToTempDir))
+            {
+                string fileName = file.Substring(pathToTempDir.Length + 1);
+                File.Copy(file, $"{localPath}/{fileName}");
+            }
+        }
+
+        public async Task UploadLocalBotToAzure(KokkaKoroBot bot)
+        {
+            // Get the blob storage
+            CloudBlobContainer container = GetBlob();
+
+            // For all of the files, upload them to blob storage
+            string localPath = $"{c_blobBotBase}/{bot.Name}/";
+            string blobPath = $"{c_blobBotBase}/{bot.Name}";
+            foreach(string file in Directory.EnumerateFiles(localPath, "", SearchOption.AllDirectories))
+            {
+                string fileName = file.Substring(localPath.Length);
+                CloudBlockBlob cloudBlockBlob = container.GetBlockBlobReference($"{blobPath}/{fileName}");
+                await cloudBlockBlob.UploadFromFileAsync(file);
+            }
         }
 
         #endregion Bots

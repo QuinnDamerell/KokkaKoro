@@ -26,7 +26,7 @@ namespace ServiceUtility
                 // Call the main loop.
                 try
                 {
-                    var task = ex.MainLoop();
+                    var task = ex.MainLoop(args);
                     task.Wait();
 
                     // If it returns false exit.
@@ -56,7 +56,7 @@ namespace ServiceUtility
     {
         int? localPort = null;
 
-        public async Task<bool> MainLoop()
+        public async Task<bool> MainLoop(string[] args)
         {
             Logger log = new Logger();
 
@@ -64,7 +64,7 @@ namespace ServiceUtility
             Service service = new Service();
 
             // Connect.
-            log.Info($"Connecting to {(localPort == null ? "" : "LOCAL")} service...");
+            log.Info($"Connecting to {(localPort == null ? "" : "LOCAL ")}service...");
             string address = (localPort.HasValue ? $"ws://localhost:{localPort.Value}" : null);
             await service.ConnectAsync(address);
             log.Info($"Connected.");
@@ -82,6 +82,28 @@ namespace ServiceUtility
             await service.Login(loginOptions);
             log.Info($"Logged in.");
 
+            // If there are args, check them.
+            if(args.Length > 0)
+            {
+                if(args[0].ToLower().Trim().Equals("uploadbot"))
+                {
+                    string path = null;
+                    if(args.Length > 1)
+                    {
+                        path = args[1];
+                    }
+                    await AddOrUplaodBot(log, service, path);
+                }
+                else
+                {
+                    log.Info("Unknown arguments passed.");
+                    log.Info("Usage:");
+                    log.Info("   serviceutility.exe UploadBot <bot path>");
+                    log.Info("");
+                    Environment.Exit(1);
+                }
+            }
+
             while (true)
             {
                 int command = GetCommand(log);
@@ -97,14 +119,32 @@ namespace ServiceUtility
                     case 3:
                         await CreateGame(log, service);
                         break;
+                    case 4:
+                        await ListBots(log, service);
+                        break;
+                    case 5:
+                        await AddOrUplaodBot(log, service);
+                        break;
                 }
             }
+        }
+
+        private async Task AddOrUplaodBot(Logger log, Service service, string path = null)
+        {
+            BotUploader u = new BotUploader();
+            await u.DoUpload(log, service, path);
         }
 
         private async Task ListGames(Logger log, Service service)
         {
             log.Info("Gathering games...");
             await GetGame(log, service, true, false);
+        }
+
+        private async Task ListBots(Logger log, Service service)
+        {
+            log.Info("Gathering bots...");
+            await GetBot(log, service, true, false);
         }
 
         private async Task GetGamesLogs(Logger log, Service service, bool saveLogs = false)
@@ -120,7 +160,7 @@ namespace ServiceUtility
             GetGameLogsResponse response = await service.GetGameLogs(new GetGameLogsOptions() { GameId = game.Id });
 
             log.Info();
-            if (GetDecission(log, "Would you like to print the logs or save them to your desktop (y=print; n=save)"))
+            if (log.GetDecission("Would you like to print the logs or save them to your desktop (y=print; n=save)"))
             {
                 // Print the game.
                 log.Info();
@@ -171,7 +211,7 @@ namespace ServiceUtility
 
         private async Task CreateGame(Logger log, Service service)
         {
-            string gameName = GetString(log, "Enter a name for the game");
+            string gameName = log.GetString("Enter a name for the game");
 
             log.Info("Creating game...");
             KokkaKoroGame game = await service.CreateGame(new CreateGameOptions()
@@ -184,7 +224,7 @@ namespace ServiceUtility
             int count = 0;
             while(true)
             {
-                if (!GetDecission(log, $"Would like you to add{(count == 0 ? "" : " another")} a bot"))
+                if (!log.GetDecission($"Would like you to add{(count == 0 ? "" : " another")} a bot"))
                 {
                     break;
                 }
@@ -196,7 +236,7 @@ namespace ServiceUtility
                 {
                     break;
                 }
-                string botName = GetString(log, "Enter a friendly name for the bot");
+                string botName = log.GetString("Enter a friendly name for the bot");
 
                 log.Info("Adding bot...");
                 await service.AddBotToGame(new AddHostedBotOptions()
@@ -208,7 +248,7 @@ namespace ServiceUtility
                 log.Info("Bot Added.");
             }
 
-            if(GetDecission(log, "Would you like to start the game now"))
+            if(log.GetDecission("Would you like to start the game now"))
             {
                 log.Info("Starting game...");
                 await service.StartGame(new StartGameOptions()
@@ -273,11 +313,12 @@ namespace ServiceUtility
             log.Info("");
             log.Info("##### BOTS  ######");
             log.SetIndent(1);
-            log.Info("6) List Bots");
+            log.Info("4) List Bots");
+            log.Info("5) Add Or Upload Bot");
             log.SetIndent(0);
             log.Info("");
             log.Info("");
-            return GetInt(log, "Select a function", 1, 4);
+            return log.GetInt("Select a function", 1, 5);
         }
 
         private async Task<KokkaKoroGame> GetGame(Logger log, Service service, bool showDetails = false, bool waitForDecision = true)
@@ -310,13 +351,13 @@ namespace ServiceUtility
             log.DecreaseIndent();
             if (waitForDecision)
             {
-                int value = GetInt(log, "Select a game", 1, count - 1);
+                int value = log.GetInt("Select a game", 1, count - 1);
                 return games[value - 1];
             }
             return null;
         }
 
-        private async Task<KokkaKoroBot> GetBot(Logger log, Service service, bool waitForDecision = true)
+        private async Task<KokkaKoroBot> GetBot(Logger log, Service service, bool showDetails = false, bool waitForDecision = true)
         {
             List<KokkaKoroBot> bots = await service.ListBots();
             if (bots.Count == 0)
@@ -336,61 +377,12 @@ namespace ServiceUtility
             log.DecreaseIndent();
             if (waitForDecision)
             {
-                int value = GetInt(log, "Select a bot", 1, count - 1);
+                int value = log.GetInt("Select a bot", 1, count - 1);
                 return bots[value - 1];
             }
             else
             {
                 return null;
-            }
-        }
-
-        private int GetInt(Logger log, string message, int min, int max)
-        {
-            while(true)
-            {
-                log.Info($"{message}: ", false);
-                string value = Console.ReadLine();
-                if(int.TryParse(value, out var result))
-                {
-                    if(result >= min && result <= max)
-                    {
-                        return result;
-                    }
-                }
-                log.Info("Invalid option, try again.");
-            }
-        }
-
-        private string GetString(Logger log, string message)
-        {
-            while (true)
-            {
-                log.Info($"{message}: ", false);
-                string value = Console.ReadLine();
-                if(!String.IsNullOrWhiteSpace(value))
-                {
-                    return value;
-                }
-                log.Info("Invalid option, try again.");
-            }
-        }
-
-        private bool GetDecission(Logger log, string message)
-        {
-            while (true)
-            {
-                log.Info($"{message}? [y or n] ", false);
-                string value = Console.ReadLine();
-                if (value.Trim().ToLower() == "y")
-                {
-                    return true;
-                }
-                if (value.Trim().ToLower() == "n")
-                {
-                    return false;
-                }
-                log.Info("Invalid option, try again.");
             }
         }
     }

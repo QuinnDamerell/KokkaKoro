@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GameCommon;
+using GameService.Managers;
 
 namespace GameService.ServiceCore
 {
@@ -109,7 +110,7 @@ namespace GameService.ServiceCore
             ServiceBot bot;
             try
             {
-                bot = await StorageMaster.Get().DownloadBot(botName);
+                bot = await BotManager.Get().GetBotCopy(botName);
             }
             catch(Exception e)
             {

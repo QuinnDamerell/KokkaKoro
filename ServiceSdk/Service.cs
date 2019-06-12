@@ -358,10 +358,39 @@ namespace KokkaKoro
             };
 
             // Make the request and validate.
-            KokkaKoroResponse<AddHostedBotResponse> response = await MakeRequest<AddHostedBotResponse>(request, "add bot");
+            KokkaKoroResponse<AddHostedBotResponse> response = await MakeRequest<AddHostedBotResponse>(request, "add to game bot");
 
             // Pull out the list to return.
             return response.Data.Game;
+        }
+
+        public async Task<KokkaKoroBot> AddOrUploadBot(AddOrUpdateBotOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if (!options.Bot.IsValid())
+            {
+                throw new KokkaKoroException("The bot details are not valid!", false);
+            }
+            if (String.IsNullOrWhiteSpace(options.Base64EncodedZipedBotFiles))
+            {
+                throw new KokkaKoroException("The bot files are required!", false);
+            }
+            
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.AddOrUpdateBot,
+                CommandOptions = options
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<AddOrUpdateBotResponse> response = await MakeRequest<AddOrUpdateBotResponse>(request, "add or upload bot");
+
+            // Return the new bot.
+            return response.Data.Bot;
         }
 
         #endregion

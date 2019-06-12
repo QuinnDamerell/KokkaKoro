@@ -76,5 +76,54 @@ namespace ServiceUtility
                 Console.Write(str);
             }
         }
+
+        public int GetInt(string message, int min, int max)
+        {
+            while (true)
+            {
+                Info($"{message}: ", false);
+                string value = Console.ReadLine();
+                if (int.TryParse(value, out var result))
+                {
+                    if (result >= min && result <= max)
+                    {
+                        return result;
+                    }
+                }
+                Info("Invalid option, try again.");
+            }
+        }
+
+        public string GetString(string message)
+        {
+            while (true)
+            {
+                Info($"{message}: ", false);
+                string value = Console.ReadLine();
+                if (!String.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+                Info("Invalid option, try again.");
+            }
+        }
+
+        public bool GetDecission(string message)
+        {
+            while (true)
+            {
+                Info($"{message}? [y or n] ", false);
+                string value = Console.ReadLine();
+                if (value.Trim().ToLower() == "y")
+                {
+                    return true;
+                }
+                if (value.Trim().ToLower() == "n")
+                {
+                    return false;
+                }
+                Info("Invalid option, try again.");
+            }
+        }
     }
 }

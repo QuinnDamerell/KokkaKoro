@@ -48,6 +48,10 @@ namespace ServiceProtocol
         // Returns all of the current game logs for the given game.
         [EnumMember(Value = "GetGameLogs")]
         GetGameLogs = 9,
+
+        // Uploads a new or updated bot
+        [EnumMember(Value = "AddOrUpdateBot")]
+        AddOrUpdateBot = 10,
     }
 
     public class KokkaKoroRequest<T>

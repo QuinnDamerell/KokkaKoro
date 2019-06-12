@@ -1,8 +1,10 @@
 ﻿using ServiceProtocol.Common;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -37,6 +39,11 @@ namespace GameService.ServiceCore
             m_localPath = localPath;
             m_wasLoadedFromCache = wasInCache;
             m_state = KokkaKoroBotState.NotStarted;       
+        }
+
+        ~ServiceBot()
+        {
+            EnsureLocalCopyCleanedup();
         }
 
         public bool StartBot(Guid gameId, string gamePassword, string userName, string passcode)
@@ -99,7 +106,10 @@ namespace GameService.ServiceCore
                 process.Kill();
             }
             catch { }
-            
+
+            // Make sure the local files are deleted.
+            EnsureLocalCopyCleanedup();
+
             // Update the state
             lock (m_stateLock)
             {
@@ -263,6 +273,40 @@ namespace GameService.ServiceCore
         public string GetStdErr()
         {
             return m_stdError.ToString();
+        }
+
+        public void CopyToTemp(string tmpPath)
+        {
+            // Create the new path and directory for the bot.
+            Guid id = Guid.NewGuid();
+            string newLocalPath = $"{tmpPath}/{id.ToString()}/";
+            Directory.CreateDirectory(newLocalPath);
+
+            // Copy everything out of the root folder.
+            IEnumerable<string> files = Directory.EnumerateFiles(m_localPath, String.Empty, SearchOption.AllDirectories);
+            foreach (string filePath in files)
+            {
+                string file = filePath.Substring(m_localPath.Length);
+                File.Copy(filePath, $"{newLocalPath}/{file}");
+            }
+
+            // Set the new local path
+            m_localPath = newLocalPath;
+        }
+
+        public void EnsureLocalCopyCleanedup()
+        {
+            try
+            {
+                if (Directory.Exists(m_localPath))
+                {
+                    Directory.Delete(m_localPath, true);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to cleanup local bot", e);
+            }
         }
     }
 }

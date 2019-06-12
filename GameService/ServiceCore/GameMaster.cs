@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using GameService.Managers;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using ServiceProtocol;
 using ServiceProtocol.Common;
@@ -94,6 +95,8 @@ namespace GameService.ServiceCore
                     return SendGameAction(jsonStr, userName);
                 case KokkaKoroCommands.GetGameLogs:
                     return GetGameLogs(jsonStr, userName);
+                case KokkaKoroCommands.AddOrUpdateBot:
+                    return await AddOrUploadBot(jsonStr, userName);
                 case KokkaKoroCommands.Heartbeat:
                     return KokkaKoroResponse<object>.CreateResult(null);
             }
@@ -543,6 +546,45 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError($"Failed to list bots: {e.Message}");
             }
         }
+
+        private async Task<KokkaKoroResponse<object>> AddOrUploadBot(string command, string userName)
+        {
+            KokkaKoroRequest<AddOrUpdateBotOptions> request;
+            try
+            {
+                request = JsonConvert.DeserializeObject<KokkaKoroRequest<AddOrUpdateBotOptions>>(command);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse add or update bot", e);
+                return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
+            }
+
+            // Validate
+            if (request.CommandOptions == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (request.CommandOptions.Bot == null)
+            {
+                return KokkaKoroResponse<object>.CreateError("Command options are required.");
+            }
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.Base64EncodedZipedBotFiles))
+            {
+                return KokkaKoroResponse<object>.CreateError("The bot files are required.");
+            }
+
+            // Do work.
+            try
+            {
+                KokkaKoroBot bot = await BotManager.Get().UploadBot(request.CommandOptions, userName);
+                return KokkaKoroResponse<object>.CreateResult(new AddOrUpdateBotResponse() { Bot = bot });
+            }
+            catch(Exception e)
+            {
+                return KokkaKoroResponse<object>.CreateError($"Upload new bot: {e.Message}");
+            }
+        }        
 
         #endregion
     }
