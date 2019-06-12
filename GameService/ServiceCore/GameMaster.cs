@@ -82,7 +82,7 @@ namespace GameService.ServiceCore
                 case KokkaKoroCommands.CreateGame:
                     return CreateGame(jsonStr, userName);
                 case KokkaKoroCommands.ListGames:
-                    return ListGames(jsonStr);
+                    return ListGames();
                 case KokkaKoroCommands.ListBots:
                     return await ListBots(jsonStr);
                 case KokkaKoroCommands.AddHostedBot:
@@ -221,7 +221,7 @@ namespace GameService.ServiceCore
             return KokkaKoroResponse<object>.CreateResult(response);
         }
 
-        private KokkaKoroResponse<object> ListGames(string command)
+        public KokkaKoroResponse<object> ListGames()
         {
             ListGamesResponse result = new ListGamesResponse();
             result.Games = new List<ServiceProtocol.Common.KokkaKoroGame>();
