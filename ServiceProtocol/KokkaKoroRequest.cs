@@ -52,6 +52,10 @@ namespace ServiceProtocol
         // Uploads a new or updated bot
         [EnumMember(Value = "AddOrUpdateBot")]
         AddOrUpdateBot = 10,
+
+        // Creates a new tournament
+        [EnumMember(Value = "CreateTournament")]
+        CreateTournament = 11,
     }
 
     public class KokkaKoroRequest<T>

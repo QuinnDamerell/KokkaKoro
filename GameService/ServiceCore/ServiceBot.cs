@@ -16,6 +16,7 @@ namespace GameService.ServiceCore
     {
         KokkaKoroBot m_info;
         string m_localPath;
+        bool m_isLocalCopy;
         bool m_wasLoadedFromCache;
 
         // Passed to the bot to help it connect
@@ -37,6 +38,7 @@ namespace GameService.ServiceCore
         {
             m_info = info;
             m_localPath = localPath;
+            m_isLocalCopy = false;
             m_wasLoadedFromCache = wasInCache;
             m_state = KokkaKoroBotState.NotStarted;       
         }
@@ -292,13 +294,14 @@ namespace GameService.ServiceCore
 
             // Set the new local path
             m_localPath = newLocalPath;
+            m_isLocalCopy = true;
         }
 
         public void EnsureLocalCopyCleanedup()
         {
             try
             {
-                if (Directory.Exists(m_localPath))
+                if (m_isLocalCopy && Directory.Exists(m_localPath))
                 {
                     Directory.Delete(m_localPath, true);
                 }

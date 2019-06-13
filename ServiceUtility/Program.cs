@@ -1,4 +1,5 @@
-﻿using KokkaKoro;
+﻿using GameCommon.StateHelpers;
+using KokkaKoro;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ServiceProtocol.Common;
@@ -54,7 +55,7 @@ namespace ServiceUtility
 
     class ServiceUtility
     {
-        int? localPort = null;
+        int? localPort = 27699;
 
         public async Task<bool> MainLoop(string[] args)
         {
@@ -125,6 +126,9 @@ namespace ServiceUtility
                     case 5:
                         await AddOrUplaodBot(log, service);
                         break;
+                    case 7:
+                        await CreateTournament(log, service);
+                        break;
                 }
             }
         }
@@ -145,6 +149,16 @@ namespace ServiceUtility
         {
             log.Info("Gathering bots...");
             await GetBot(log, service, true, false);
+        }
+
+        private async Task CreateTournament(Logger log, Service service)
+        {
+            log.Info("Creating tournament...");
+            int games = log.GetInt("How many games would you like to be played", 1, 1000);
+            int botsPerGame = log.GetInt("How many bots would you like in each game", 2, 4);
+            string reason = log.GetString("What's the reason for the creation of this tournament");
+            KokkaKoroTournament tour = await service.CreateTournament(new CreateTournamentOptions() { ReasonForCreation = reason, NumberOfGames = games, BotsPerGame = botsPerGame });
+            log.Info($"New tournament started! [{tour.Id}]");
         }
 
         private async Task GetGamesLogs(Logger log, Service service, bool saveLogs = false)
@@ -271,17 +285,35 @@ namespace ServiceUtility
             log.Info($"Started: {(game.Started.HasValue ? (game.Started.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Game Engine Started: {(game.GameEngineStarted.HasValue ? (game.GameEngineStarted.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Ended: {(game.Eneded.HasValue ? (game.Eneded.Value - game.Created).TotalSeconds + "s" : "")}");
-            log.Info($"Players:");
-            log.IncreaseIndent();                       
-            foreach (KokkaKoroPlayer player in game.Players)
+            log.Info($"Has Winner: {game.HasWinner}");
+
+            log.Info($"Leaderboard:");
+            log.IncreaseIndent();
+            if (game.Leaderboard != null)
             {
-                PrintPlayer(log, player);
+                foreach (KokkaKoroLeaderboardElement lb in game.Leaderboard)
+                {
+                    log.Info($"#{lb.Rank} - {lb.Player.Name}, {lb.LandmarksOwned} owned landmarks");
+                }
             }
-            if(game.Players.Count == 0)
+            else
             {
                 log.Info("None.");
             }
             log.DecreaseIndent();
+
+            log.Info($"Players:");
+            log.IncreaseIndent();
+            foreach (KokkaKoroPlayer player in game.Players)
+            {
+                PrintPlayer(log, player);
+            }
+            if (game.Players.Count == 0)
+            {
+                log.Info("None.");
+            }
+            log.DecreaseIndent();
+
             log.DecreaseIndent();
         }
 
@@ -317,8 +349,14 @@ namespace ServiceUtility
             log.Info("5) Add Or Upload Bot");
             log.SetIndent(0);
             log.Info("");
+            log.Info("##### TOURNAMENTS ######");
+            log.SetIndent(1);
+            log.Info("6) List Tournaments");
+            log.Info("7) Create Tournament");
+            log.SetIndent(0);
             log.Info("");
-            return log.GetInt("Select a function", 1, 5);
+            log.Info("");
+            return log.GetInt("Select a function", 1, 7);
         }
 
         private async Task<KokkaKoroGame> GetGame(Logger log, Service service, bool showDetails = false, bool waitForDecision = true)

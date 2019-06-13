@@ -395,6 +395,41 @@ namespace KokkaKoro
 
         #endregion
 
+        #region Tournament Stuff
+
+        public async Task<KokkaKoroTournament> CreateTournament(CreateTournamentOptions options)
+        {
+            if (options == null)
+            {
+                throw new KokkaKoroException("Options are required!", false);
+            }
+            if (String.IsNullOrWhiteSpace(options.ReasonForCreation))
+            {
+                throw new KokkaKoroException("A reason is required!", false);
+            }
+            if (options.BotsPerGame < 2 || options.BotsPerGame > 4)
+            {
+                throw new KokkaKoroException("The bot count must be between 2-4!", false);
+            }
+            if(options.NumberOfGames < 1 || options.NumberOfGames > 1000)
+            {
+                throw new KokkaKoroException("The bot count must be between 1-1000!", false);
+            }
+
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.CreateTournament,
+                CommandOptions = options
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<CreateTournamentResponse> response = await MakeRequest<CreateTournamentResponse>(request, "create tournament");
+            return response.Data.Tournament;
+        }
+
+        #endregion
+
         public void Info(string msg)
         {
             ILogger l = m_logger;

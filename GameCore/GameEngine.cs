@@ -65,6 +65,19 @@ namespace GameCore
             return m_state.CurrentTurnState.HasGameEnded;
         }
 
+        public (bool, List<KokkaKoroLeaderboardElement>) GetResults()
+        {
+            if(m_state == null || m_state.Players == null || m_state.Players.Count == 0)
+            {
+                return (false, null);
+            }
+            lock (m_actionLock)
+            {
+                StateHelper sh = m_state.GetStateHelper(m_state.Players[0].UserName);
+                return (sh.Player.CheckForWinner() != null, sh.Player.GetCurrentLeaderboard());
+            }
+        }
+
         // Take a play action and handles it.
         public (GameActionResponse, List<GameLog>) ConsumeAction(GameAction<object> action, string userName)
         {

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GameCommon;
 using GameService.Managers;
+using GameCommon.StateHelpers;
 
 namespace GameService.ServiceCore
 {
@@ -588,6 +589,13 @@ namespace GameService.ServiceCore
                 }
             }
 
+            bool hasWinner = false;
+            List<KokkaKoroLeaderboardElement> lb = null;
+            if(m_gameEngine != null)
+            {
+                (hasWinner, lb) = m_gameEngine.GetResults();
+            }
+
             return new KokkaKoroGame
             {
                 State = m_state,
@@ -601,7 +609,9 @@ namespace GameService.ServiceCore
                 Started = m_startedAt,
                 GameEngineStarted = m_gameStartedAt,
                 Eneded = m_gameEndedAt,
-                IfFailedFatialError = m_fatalError
+                IfFailedFatialError = m_fatalError,
+                Leaderboard = lb,
+                HasWinner = hasWinner
             };
         }
 

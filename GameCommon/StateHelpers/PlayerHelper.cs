@@ -6,6 +6,13 @@ using System.Text;
 
 namespace GameCommon.StateHelpers
 {
+    public class KokkaKoroLeaderboardElement
+    {
+        public int Rank;
+        public int LandmarksOwned;
+        public GamePlayer Player;        
+    }
+
     /// <summary>
     /// Helper functions to answer player state questions.
     /// </summary>
@@ -219,6 +226,43 @@ namespace GameCommon.StateHelpers
             return null;
         }
 
+        /// <summary>
+        /// Returns the current ranking of all the players, considering how many landmarks they own.
+        /// </summary>
+        /// <returns></returns>
+        public List<KokkaKoroLeaderboardElement> GetCurrentLeaderboard()
+        {
+            // Get all of the players and how many buildings they have.
+            List<KokkaKoroLeaderboardElement> players = new List<KokkaKoroLeaderboardElement>();
+            foreach(GamePlayer p in m_baseHelper.GetState().Players)
+            {
+                players.Add(new KokkaKoroLeaderboardElement()
+                {
+                    Player = p,
+                    LandmarksOwned = GetNumberOfLandmarksOwned(p.PlayerIndex)
+                });
+            }
+
+            // Sort
+            players.Sort(delegate (KokkaKoroLeaderboardElement x, KokkaKoroLeaderboardElement y)
+            {
+                return y.LandmarksOwned - x.LandmarksOwned;
+            });
+
+            int rank = 0;
+            int lastCardCount = 5;
+            foreach(KokkaKoroLeaderboardElement p in players)
+            {
+                if(p.LandmarksOwned < lastCardCount)
+                {
+                    rank++;
+                    lastCardCount = p.LandmarksOwned;
+                }
+                p.Rank = rank;
+            }
+            return players;
+        }
+
         #endregion
 
         #region Basic Player Specific 
@@ -305,6 +349,26 @@ namespace GameCommon.StateHelpers
         #endregion
 
         #region Player Game Stuff
+
+        public int GetNumberOfLandmarksOwned(int? playerIndex = null)
+        {
+            GamePlayer p = GetPlayer(playerIndex);
+            if (p == null)
+            {
+                return -1;
+            }
+
+            int count = 0;
+            GameState s = m_baseHelper.GetState();
+            for(int b = 0; b < m_baseHelper.BuildingRules.GetCountOfUniqueTypes(); b++)
+            {
+                if(m_baseHelper.BuildingRules[b].GetEstablishmentColor() == EstablishmentColor.Landmark)
+                {
+                    count += p.OwnedBuildings[b] > 0 ? 1 : 0;
+                }
+            }
+            return count;
+        }
 
         /// <summary>
         /// Returns the max amount of rolls for the given player. If no index is given, the perspective user will be used.

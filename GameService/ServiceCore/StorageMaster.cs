@@ -26,6 +26,7 @@ namespace GameService.ServiceCore
             return s_storage;
         }
 
+        
         #region Bots
 
         public async Task<List<KokkaKoroBot>> ListBots()

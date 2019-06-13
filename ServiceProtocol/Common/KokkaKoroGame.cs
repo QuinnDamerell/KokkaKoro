@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using GameCommon.StateHelpers;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
@@ -65,5 +66,11 @@ namespace ServiceProtocol.Common
 
         // Indicates when the game ended.
         public DateTime? Eneded;
+
+        // Indicates if the game has ended and has a winner.
+        public bool HasWinner;
+
+        // If the game is running or finished, the current leader board.
+        public List<KokkaKoroLeaderboardElement> Leaderboard;
     }
 }

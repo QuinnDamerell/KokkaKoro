@@ -80,7 +80,7 @@ namespace GameService.ServiceCore
                 case KokkaKoroCommands.Login:
                     return await Login(jsonStr);
                 case KokkaKoroCommands.CreateGame:
-                    return CreateGame(jsonStr, userName);
+                    return CreateGameInternal(jsonStr, userName);
                 case KokkaKoroCommands.ListGames:
                     return ListGames();
                 case KokkaKoroCommands.ListBots:
@@ -97,6 +97,8 @@ namespace GameService.ServiceCore
                     return GetGameLogs(jsonStr, userName);
                 case KokkaKoroCommands.AddOrUpdateBot:
                     return await AddOrUploadBot(jsonStr, userName);
+                case KokkaKoroCommands.CreateTournament:
+                    return await TournamentMaster.Get().Create(jsonStr, userName);
                 case KokkaKoroCommands.Heartbeat:
                     return KokkaKoroResponse<object>.CreateResult(null);
             }
@@ -173,26 +175,25 @@ namespace GameService.ServiceCore
             }
         }
 
-        private KokkaKoroResponse<object> CreateGame(string command, string userName)
+        private KokkaKoroResponse<object> CreateGameInternal(string command, string userName)
         {
             KokkaKoroRequest<CreateGameOptions> request;
             try
             {
                 request = JsonConvert.DeserializeObject<KokkaKoroRequest<CreateGameOptions>>(command);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Logger.Error("Failed to parse create game", e);
                 return KokkaKoroResponse<object>.CreateError("Failed to parse command options.");
             }
 
-            if(request.CommandOptions == null)
+            // Validate
+            if (request.CommandOptions == null)
             {
                 return KokkaKoroResponse<object>.CreateError("Command options are required.");
             }
-
-            // Validate
-            if(String.IsNullOrWhiteSpace(request.CommandOptions.GameName))
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.GameName))
             {
                 return KokkaKoroResponse<object>.CreateError("GameName is a required option.");
             }
@@ -200,14 +201,24 @@ namespace GameService.ServiceCore
             if (request.CommandOptions.GameTimeLimitSeconds.HasValue)
             {
                 gameTime = new TimeSpan(0, 0, request.CommandOptions.GameTimeLimitSeconds.Value);
-            }
+            }          
 
             // Create the game
+            ServiceGame game = CreateGame(request.CommandOptions.GameName, request.CommandOptions.Password, gameTime, userName);
+
+            // Return the game info.
+            CreateGameResponse response = new CreateGameResponse { Game = game.GetInfo() };
+            return KokkaKoroResponse<object>.CreateResult(response);
+        }
+
+        public ServiceGame CreateGame(string gameName, string password, TimeSpan? gameTimeLimit, string userName)
+        { 
+            // Create the game
             ServiceGame game = new ServiceGame(
-                request.CommandOptions.GameName,
+                gameName,
                 userName,
-                request.CommandOptions.Password,
-                gameTime
+                password,
+                gameTimeLimit
                 );
 
             // Add it to the dictionary
@@ -216,9 +227,7 @@ namespace GameService.ServiceCore
                 m_currentGames.Add(game.GetId(), game);
             }
 
-            // Return the game info.
-            CreateGameResponse response = new CreateGameResponse { Game = game.GetInfo() };
-            return KokkaKoroResponse<object>.CreateResult(response);
+            return game;    
         }
 
         public KokkaKoroResponse<object> ListGames()

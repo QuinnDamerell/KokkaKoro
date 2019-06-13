@@ -33,7 +33,7 @@ namespace GameService.Managers
             // Next, get the bot to copy itself to a temp location just for this execution.
             // The bot will automatically clean up it's temp flies when it's done executing or the class
             // is destroyed.
-            bot.CopyToTemp(c_tempFolderPath);
+            bot.CopyToTemp(Directory.GetCurrentDirectory() + $"/{c_tempFolderPath}");
 
             // Return the bot.
             return bot;
