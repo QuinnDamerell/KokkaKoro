@@ -1,4 +1,5 @@
 ﻿using GameService.Managers;
+using Microsoft.CodeAnalysis.Operations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using ServiceProtocol;
@@ -99,6 +100,8 @@ namespace GameService.ServiceCore
                     return await AddOrUploadBot(jsonStr, userName);
                 case KokkaKoroCommands.CreateTournament:
                     return await TournamentMaster.Get().Create(jsonStr, userName);
+                case KokkaKoroCommands.ListTournaments:
+                    return TournamentMaster.Get().List(jsonStr, userName);
                 case KokkaKoroCommands.Heartbeat:
                     return KokkaKoroResponse<object>.CreateResult(null);
             }

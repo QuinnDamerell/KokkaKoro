@@ -17,7 +17,7 @@ namespace GameService.ServiceCore
             return s_tournmentMaster;
         }
 
-        Dictionary<Guid, ServiceTournament> m_tournaments = new Dictionary<Guid, ServiceTournament>;
+        Dictionary<Guid, ServiceTournament> m_tournaments = new Dictionary<Guid, ServiceTournament>();
 
         public async Task<KokkaKoroResponse<object>> Create(string command, string userName)
         {
@@ -42,7 +42,7 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError("A reason for creation is required.");
             }
             int botsPerGame = request.CommandOptions.BotsPerGame;
-            if(botsPerGame < 2 || botsPerGame > 4)
+            if (botsPerGame < 2 || botsPerGame > 4)
             {
                 return KokkaKoroResponse<object>.CreateError("There must be 2-4 bots per game.");
             }
@@ -52,10 +52,10 @@ namespace GameService.ServiceCore
                 return KokkaKoroResponse<object>.CreateError("The number of games must be between 0 and 1000.");
             }
             List<string> bots = request.CommandOptions.Bots;
-            if(bots == null || bots.Count == 0)
+            if (bots == null || bots.Count == 0)
             {
                 bots = new List<string>();
-                foreach(KokkaKoroBot b in await StorageMaster.Get().ListBots())
+                foreach (KokkaKoroBot b in await StorageMaster.Get().ListBots())
                 {
                     bots.Add(b.Name);
                 }
@@ -63,7 +63,7 @@ namespace GameService.ServiceCore
 
             // Create it
             ServiceTournament tournament = new ServiceTournament(numberOfGames, botsPerGame, request.CommandOptions.ReasonForCreation, userName, bots);
-            lock(m_tournaments)
+            lock (m_tournaments)
             {
                 m_tournaments.Add(tournament.GetId(), tournament);
             }
@@ -73,6 +73,20 @@ namespace GameService.ServiceCore
 
             // Return
             return KokkaKoroResponse<object>.CreateResult(new CreateTournamentResponse() { Tournament = tournament.GetInfo() });
-        }  
+        }
+
+        public KokkaKoroResponse<object> List(string command, string userName)
+        {
+            // There are no arguments, so don't look at the object.
+            List<KokkaKoroTournament> t = new List<KokkaKoroTournament>();
+            lock (m_tournaments)
+            {
+                foreach (KeyValuePair<Guid, ServiceTournament> p in m_tournaments)
+                {
+                    t.Add(p.Value.GetInfo());
+                }
+            }
+            return KokkaKoroResponse<object>.CreateResult(new ListTournamentResponse() { Tournaments = t });
+        }
     }
 }

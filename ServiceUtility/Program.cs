@@ -1,4 +1,5 @@
-﻿using GameCommon.StateHelpers;
+﻿using GameCommon.Protocol.GameUpdateDetails;
+using GameCommon.StateHelpers;
 using KokkaKoro;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -55,7 +56,7 @@ namespace ServiceUtility
 
     class ServiceUtility
     {
-        int? localPort = 27699;
+        int? localPort = null;
 
         public async Task<bool> MainLoop(string[] args)
         {
@@ -126,6 +127,9 @@ namespace ServiceUtility
                     case 5:
                         await AddOrUplaodBot(log, service);
                         break;
+                    case 6:
+                        await ListTournaments(log, service);
+                        break;
                     case 7:
                         await CreateTournament(log, service);
                         break;
@@ -149,6 +153,12 @@ namespace ServiceUtility
         {
             log.Info("Gathering bots...");
             await GetBot(log, service, true, false);
+        }
+
+        private async Task ListTournaments(Logger log, Service service)
+        {
+            log.Info("Gathering tournaments...");
+            await GetTournament(log, service, true, false);
         }
 
         private async Task CreateTournament(Logger log, Service service)
@@ -422,6 +432,76 @@ namespace ServiceUtility
             {
                 return null;
             }
+        }
+
+        private async Task<KokkaKoroTournament> GetTournament(Logger log, Service service, bool showDetails = false, bool waitForDecision = true)
+        {
+            List<KokkaKoroTournament> tours = await service.ListTournaments();
+            if (tours.Count == 0)
+            {
+                log.Info("There are no tournaments on the service!");
+                return null;
+            }
+            log.Info();
+            log.Info("Tournaments:");
+            log.IncreaseIndent();
+            int count = 1;
+            foreach (KokkaKoroTournament t in tours)
+            {
+                if(showDetails)
+                {
+                    log.Info($"{count})");
+                    log.IncreaseIndent();
+                    PrintTournament(log, t);
+                    log.DecreaseIndent();
+                }
+                else
+                {
+                    log.Info($"{count}) {t.Id} - {t.Status} Created by {t.CreatedFor}");
+                }
+                count++;
+            }
+            log.DecreaseIndent();
+            if (waitForDecision)
+            {
+                int value = log.GetInt("Select a tournament", 1, count - 1);
+                return tours[value - 1];
+            }
+            else
+            {
+                return null;
+            }
+        }   
+        
+        private void PrintTournament(Logger log, KokkaKoroTournament t)
+        {
+            log.Info($"Id: {t.Id}");
+            log.Info($"Status: {t.Status}");
+            log.Info($"Reason: {t.Reason}");
+            log.Info($"Created For: {t.CreatedFor}");
+            log.Info($"Error if failed: {t.MessageIfError}");
+            log.Info("Games:");
+            log.IncreaseIndent();
+            foreach(KokkaKoroGame game in t.Games)
+            {
+                string gameStr = $"{game.Id} - {game.State} - ";
+                if (game.Leaderboard != null)
+                {
+                    foreach (KokkaKoroLeaderboardElement le in game.Leaderboard)
+                    {
+                        gameStr += $"#{le.Rank} {le.Player.Name}; ";
+                    }
+                }
+                log.Info(gameStr);
+            }
+            log.DecreaseIndent();
+            log.Info("Results:");
+            log.IncreaseIndent();
+            foreach (TournamentResult result in t.Results)
+            {
+                log.Info($"{result.BotName}: {result.Wins} wins, {result.Losses} losses, {result.Errors} errors");
+            }
+            log.DecreaseIndent();
         }
     }
 }

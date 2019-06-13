@@ -1,4 +1,5 @@
-﻿using ServiceProtocol;
+﻿using GameCommon.StateHelpers;
+using ServiceProtocol;
 using ServiceProtocol.Common;
 using System;
 using System.Collections.Generic;
@@ -110,13 +111,124 @@ namespace GameService.ServiceCore
 
         public KokkaKoroTournament GetInfo()
         {
+            // Get a local list of games
+            List<ServiceGame> games = null;
+            lock(m_games)
+            {
+                games = new List<ServiceGame>(m_games);
+            }
+
+            // Now get the game info
+            List<KokkaKoroGame> gameInfo = new List<KokkaKoroGame>();
+            foreach(ServiceGame g in games)
+            {
+                gameInfo.Add(g.GetInfo());
+            }
+
+            // Now figure out the current bot results.
+            Dictionary<string, TournamentResult> botRank = new Dictionary<string, TournamentResult>();
+            foreach(KokkaKoroGame g in gameInfo)
+            {
+                if(!g.Eneded.HasValue)
+                {
+                    // If the game hasn't been ended, add them to the pending game.
+                    foreach(KokkaKoroPlayer p in g.Players)
+                    {
+                        if(p.IsBot)
+                        {
+                            GetBotResult(botRank, p.BotDetails.Bot.Name).InProgress++;
+                        }
+                    }
+                }
+                else
+                {
+                    if(!g.HasWinner || g.Leaderboard == null || g.Leaderboard.Count == 0)
+                    {
+                        // If the game doesn't have a winner, add to the error list.
+                        foreach (KokkaKoroPlayer p in g.Players)
+                        {
+                            if (p.IsBot)
+                            {
+                                GetBotResult(botRank, p.BotDetails.Bot.Name).InProgress++;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // The game is over and has a leader board, add the data.
+
+                        // Only consider the highest ranking bot in each game (if there's the same bot in multiple games.)
+                        Dictionary<string, bool> currentGame = new Dictionary<string, bool>();
+                        foreach (KokkaKoroLeaderboardElement l in g.Leaderboard)
+                        {
+                            if (!currentGame.ContainsKey(l.Player.Name))
+                            {
+                                currentGame.Add(l.Player.Name, false);
+                                TournamentResult result = GetBotResult(botRank, l.Player.Name);
+                                if (l.Rank == 1)
+                                {
+                                    result.Wins++;
+                                }
+                                else
+                                {
+                                    result.Losses++;
+                                }
+                                // 3 points for 1st, 2 points for 2nd, 1 points for 3rd, and 0 for 4th.
+                                result.Score += Math.Max(0, 4 - l.Rank);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Build the final list and sort them.
+            List<TournamentResult> results = new List<TournamentResult>();
+            foreach(KeyValuePair<string, TournamentResult> p in botRank)
+            {
+                bool added = false;
+                for(int i = 0; i < results.Count; i++)
+                {
+                    if (results[i].Losses != 0 && results[i].Wins != 0)
+                    {
+                        results[i].WinRate = ((double)results[i].Wins / (double)(results[i].Losses + results[i].Wins)) * 100.0;
+                    }
+                    else
+                    {
+                        results[i].WinRate = 0;
+                    }
+
+                    if(results[i].Score < p.Value.Score)
+                    {
+                        results.Insert(i, p.Value);
+                        added = true;
+                        break;
+                    }
+                }
+                if(!added)
+                {
+                    results.Add(p.Value);
+                }
+            }
+
             return new KokkaKoroTournament()
             {
                 Id = m_id,
                 Status = m_status,
+                MessageIfError = m_error,
                 CreatedFor = m_createdBy,
-                Reason = m_reason
+                Reason = m_reason,
+                Games  = gameInfo,
+                Results = results
             };
+        }
+
+        private TournamentResult GetBotResult(Dictionary<string, TournamentResult> botRank, string botName)
+        {
+            if (!botRank.ContainsKey(botName))
+            {
+                botRank[botName] = new TournamentResult() { BotName = botName };
+            }
+            return botRank[botName];
         }
 
         private void SetError(string message)

@@ -56,6 +56,10 @@ namespace ServiceProtocol
         // Creates a new tournament
         [EnumMember(Value = "CreateTournament")]
         CreateTournament = 11,
+
+        // Creates a new tournament
+        [EnumMember(Value = "ListTournaments")]
+        ListTournaments = 12,
     }
 
     public class KokkaKoroRequest<T>

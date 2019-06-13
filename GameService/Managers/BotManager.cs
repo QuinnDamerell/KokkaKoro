@@ -52,7 +52,7 @@ namespace GameService.Managers
             {
                 localBot = await StorageMaster.Get().DownloadBot(request.Bot.Name);
             }
-            catch (BotNotFound e)
+            catch (BotNotFound)
             {
                 // This is ok, it means it's a new bot.
             }

@@ -428,6 +428,19 @@ namespace KokkaKoro
             return response.Data.Tournament;
         }
 
+        public async Task<List<KokkaKoroTournament>> ListTournaments()
+        {
+            // Build the request
+            KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()
+            {
+                Command = KokkaKoroCommands.ListTournaments
+            };
+
+            // Make the request and validate.
+            KokkaKoroResponse<ListTournamentResponse> response = await MakeRequest<ListTournamentResponse>(request, "list tournaments");
+            return response.Data.Tournaments;
+        }
+
         #endregion
 
         public void Info(string msg)
