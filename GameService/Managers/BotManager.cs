@@ -107,6 +107,9 @@ namespace GameService.Managers
                 // Unzip the files.
                 ZipFile.ExtractToDirectory(tempZipPathFile, tempZipFolder);
 
+                // Delete any current botinfo files
+                DeleteFile($"{tempZipFolder}/{c_botInfoFile}");
+
                 // Write the updated bot info.
                 WriteBotInfo(tempZipFolder, request.Bot);
 

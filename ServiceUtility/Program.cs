@@ -125,25 +125,25 @@ namespace ServiceUtility
                 switch (command)
                 {
                     case 1:
-                        await ListGames(log, service);
-                        break;
-                    case 2:
-                        await GetGamesLogs(log, service);
-                        break;
-                    case 3:
-                        await CreateGame(log, service);
-                        break;
-                    case 4:
-                        await ListBots(log, service);
-                        break;
-                    case 5:
-                        await AddOrUplaodBot(log, service);
-                        break;
-                    case 6:
                         await ListTournaments(log, service);
                         break;
-                    case 7:
+                    case 2:
                         await CreateTournament(log, service);
+                        break;
+                    case 3:
+                        await ListBots(log, service);
+                        break;
+                    case 4:
+                        await AddOrUplaodBot(log, service);
+                        break;
+                    case 5:
+                        await ListGames(log, service);
+                        break;
+                    case 6:
+                        await GetGamesLogs(log, service);
+                        break;
+                    case 7:
+                        await CreateGame(log, service);
                         break;
                 }
             }
@@ -157,23 +157,23 @@ namespace ServiceUtility
             log.Info("***   Main Menu   ***");
             log.Info("*********************");
             log.Info("");
-            log.Info("****** GAMES ******");
+            log.Info("****** TOURNAMENTS ******");
             log.SetIndent(1);
-            log.Info("1) List Games");
-            log.Info("2) Get Game Logs");
-            log.Info("3) Create Game");
+            log.Info("1) List Tournaments");
+            log.Info("2) Create Tournament");
             log.SetIndent(0);
             log.Info("");
             log.Info("****** BOTS ******");
             log.SetIndent(1);
-            log.Info("4) List Bots");
-            log.Info("5) Add Or Upload Bot");
+            log.Info("3) List Bots");
+            log.Info("4) Add Or Upload Bot");
             log.SetIndent(0);
             log.Info("");
-            log.Info("****** TOURNAMENTS ******");
+            log.Info("****** GAMES ******");
             log.SetIndent(1);
-            log.Info("6) List Tournaments");
-            log.Info("7) Create Tournament");
+            log.Info("5) List Games");
+            log.Info("6) Get Game Logs");
+            log.Info("7) Create Game");
             log.SetIndent(0);
             log.Info("");
             log.Info("");
@@ -425,7 +425,7 @@ namespace ServiceUtility
                 }
                 else
                 {
-                    log.Info($"{count}) {game.GameName} - Created {game.Created.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")} - {game.Id}");
+                    log.Info($"{count}) {game.GameName} - {game.State}{(game.State == KokkaKoroGameState.Complete && !game.HasWinner ? " HAS ERROR" : "")} - Created {game.Created.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")} - {game.Id}");
                 }
                 count++;
             }          
