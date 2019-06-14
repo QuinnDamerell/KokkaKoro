@@ -134,10 +134,10 @@ namespace GameCommon.StateHelpers
                 // Note we want to buildable value here excluding starting building modifiers since that dependent on player numbers.
                 count = m_baseHelper.BuildingRules[buildingIndex].InternalGetMaxBuildingCountInGame();
 
-                // But if it's a starting building, than the per player limit is the max count + 1.
+                // But if it's a starting building, than the per player limit is the max count + number of players.
                 if(b.IsStartingBuilding())
                 {
-                    count++;
+                    count+= m_baseHelper.Player.GetPlayerCount();
                 }
             }
             return count;
