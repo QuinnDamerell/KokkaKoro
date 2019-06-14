@@ -98,11 +98,6 @@ namespace GameCommon
         public static int GameVersion = 1;
 
         /// <summary>
-        /// This is the version of the game the remote sever is running.
-        /// </summary>
-        public int RemoteGameVersion = GameVersion;
-
-        /// <summary>
         /// The game mode being played.
         /// </summary>
         public GameMode Mode;

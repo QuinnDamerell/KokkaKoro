@@ -239,6 +239,7 @@ namespace ServiceUtility
             }
 
             // Get the game logs.
+            log.Info("Getting logs...");
             GetGameLogsResponse response = await service.GetGameLogs(new GetGameLogsOptions() { GameId = game.Id });
 
             log.Info();

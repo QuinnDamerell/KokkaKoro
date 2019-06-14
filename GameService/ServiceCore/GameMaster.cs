@@ -1,4 +1,5 @@
-﻿using GameService.Managers;
+﻿using GameCommon;
+using GameService.Managers;
 using Microsoft.CodeAnalysis.Operations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -364,6 +365,13 @@ namespace GameService.ServiceCore
             if(request.CommandOptions.User.Passcode.Length < 5)
             {
                 return KokkaKoroResponse<object>.CreateError("The passcode must be longer than 4 chars.");
+            }
+
+            // Check that the protocol and game version match, otherwise deny the client.
+            if (request.CommandOptions.GameVersion != GameState.GameVersion 
+                || request.CommandOptions.ProtocolVersion != KokkaKoroRequest<object>.ProtocolVersion)
+            {
+                return KokkaKoroResponse<object>.CreateError($"The protocol or game version of this client is too old. Please update it. [You sent p:{request.CommandOptions.ProtocolVersion} g:{request.CommandOptions.GameVersion}, server p:{KokkaKoroRequest<object>.ProtocolVersion} g:{GameState.GameVersion}]");
             }
 
             // Check to make sure the user and passcode are correct.

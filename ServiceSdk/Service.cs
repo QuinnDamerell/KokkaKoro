@@ -1,4 +1,5 @@
-﻿using GameCommon.Protocol;
+﻿using GameCommon;
+using GameCommon.Protocol;
 using Newtonsoft.Json;
 using ServiceProtocol;
 using ServiceProtocol.Common;
@@ -150,6 +151,10 @@ namespace KokkaKoro
             {
                 throw new KokkaKoroException("A passcode is required!", false);
             }
+
+            // Set the protocol and game version
+            options.GameVersion = GameState.GameVersion;
+            options.ProtocolVersion = KokkaKoroRequest<object>.ProtocolVersion;
 
             // Build the request
             KokkaKoroRequest<object> request = new KokkaKoroRequest<object>()

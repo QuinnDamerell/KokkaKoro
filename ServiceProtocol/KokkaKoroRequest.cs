@@ -64,6 +64,13 @@ namespace ServiceProtocol
 
     public class KokkaKoroRequest<T>
     {
+        /// <summary>
+        /// This is the protocol version the local client is running.
+        /// The protocol version will be updated whenever there are breaking changes.
+        /// </summary>
+        [JsonIgnore]
+        public static int ProtocolVersion = 1;
+
         // If the server doesn't hear from the client in this amount of time the socket will be closed.
         [JsonIgnore]
         public static int HeartbeatTimeoutMs = 4000;

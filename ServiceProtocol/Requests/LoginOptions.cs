@@ -8,5 +8,9 @@ namespace ServiceProtocol.Requests
     public class LoginOptions
     {
         public KokkaKoroUser User;
+
+        // The game and protocol version of this client.
+        public int GameVersion;
+        public int ProtocolVersion;
     }
 }
