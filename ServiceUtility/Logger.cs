@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ServiceUtility
 {
@@ -90,35 +91,43 @@ namespace ServiceUtility
                         return result;
                     }
                 }
-                Info("Invalid option, try again.");
+                Info("Invalid value, try again.");
             }
         }
 
-        public string GetString(string message)
+        public string GetString(string message, bool onlyLettersAndNumbers = false)
         {
             while (true)
             {
                 Info($"{message}: ", false);
                 string value = Console.ReadLine();
-                if (!String.IsNullOrWhiteSpace(value))
+                if (!string.IsNullOrWhiteSpace(value) && (!onlyLettersAndNumbers || Regex.IsMatch(value, @"^[a-zA-Z0-9_]+$")))
                 {
                     return value;
                 }
-                Info("Invalid option, try again.");
+                Info("Invalid string, try again.");
             }
         }
 
-        public bool GetDecission(string message)
+        public bool GetDecission(string message, string trueValue = null, string falseValue = null)
         {
+            if(trueValue == null)
+            {
+                trueValue = "y";
+            }
+            if(falseValue == null)
+            {
+                falseValue = "n";
+            }
             while (true)
             {
-                Info($"{message}? [y or n] ", false);
+                Info($"{message}? [{trueValue} or {falseValue}] ", false);
                 string value = Console.ReadLine();
-                if (value.Trim().ToLower() == "y")
+                if (value.Trim().ToLower().Equals(trueValue.ToLower()))
                 {
                     return true;
                 }
-                if (value.Trim().ToLower() == "n")
+                if (value.Trim().ToLower().Equals(falseValue.ToLower()))
                 {
                     return false;
                 }

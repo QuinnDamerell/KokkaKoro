@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ServiceProtocol.Common
 {
@@ -69,6 +70,7 @@ namespace ServiceProtocol.Common
         public bool IsValid()
         {
             return !String.IsNullOrWhiteSpace(Name)
+                && Regex.IsMatch(Name, @"^[a-zA-Z0-9_]+$")
                 && !String.IsNullOrWhiteSpace(EntryDll)
                 && EntryDll.ToLower().EndsWith(".dll")
                 && Major >= 0

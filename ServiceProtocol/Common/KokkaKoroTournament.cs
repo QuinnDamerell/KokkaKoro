@@ -12,6 +12,9 @@ namespace ServiceProtocol.Common
         [EnumMember(Value = "Created")]
         Created,
 
+        [EnumMember(Value = "SettingUp")]
+        SettingUp,
+
         [EnumMember(Value = "Running")]
         Running,
 
@@ -48,6 +51,9 @@ namespace ServiceProtocol.Common
 
     public class KokkaKoroTournament
     {
+        // The name of the tournament
+        public string Name;
+
         // The id of the tournament
         public Guid Id;
 
@@ -55,14 +61,17 @@ namespace ServiceProtocol.Common
         [JsonConverter(typeof(StringEnumConverter))]
         public TournamentStatus Status;
 
-        // A reason why it's created.
-        public string Reason;
+        // When it was created UTC
+        public DateTime CreatedAt;
 
-        // If the status is error, the message that stopped it.
-        public string MessageIfError;
+        // If not null, when it was ended. UTC
+        public DateTime? EndedAt;
 
         // The user name that created the tournament
         public string CreatedFor;
+
+        // If the status is error, the message that stopped it.
+        public string MessageIfError;
 
         // The list of games in the given tournament
         public List<KokkaKoroGame> Games;

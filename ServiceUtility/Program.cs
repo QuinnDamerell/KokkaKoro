@@ -17,10 +17,19 @@ namespace ServiceUtility
 {
     class Program
     {
+        static string Version = "1.0";
+
         static void Main(string[] args)
         {
             Logger log = new Logger();
-            while(true)
+
+            log.Info();
+            log.Info($"***************************");
+            log.Info($"*** Service Utility {Version} ***");
+            log.Info($"***************************");
+            log.Info();
+
+            while (true)
             {
                 // Create a new object.
                 ServiceUtility ex = new ServiceUtility();
@@ -56,6 +65,9 @@ namespace ServiceUtility
 
     class ServiceUtility
     {
+        //
+        // Add a port number here if you want to connect to a local service.
+        // 
         int? localPort = null;
 
         public async Task<bool> MainLoop(string[] args)
@@ -66,7 +78,7 @@ namespace ServiceUtility
             Service service = new Service();
 
             // Connect.
-            log.Info($"Connecting to {(localPort == null ? "" : "LOCAL ")}service...");
+            log.Info($"Connecting to {(localPort == null ? "the Azure" : "A LOCAL")} service...");
             string address = (localPort.HasValue ? $"ws://localhost:{localPort.Value}" : null);
             await service.ConnectAsync(address);
             log.Info($"Connected.");
@@ -137,6 +149,37 @@ namespace ServiceUtility
             }
         }
 
+        private int GetCommand(Logger log)
+        {
+            log.Info("");
+            log.Info("");
+            log.Info("*********************");
+            log.Info("***   Main Menu   ***");
+            log.Info("*********************");
+            log.Info("");
+            log.Info("****** GAMES ******");
+            log.SetIndent(1);
+            log.Info("1) List Games");
+            log.Info("2) Get Game Logs");
+            log.Info("3) Create Game");
+            log.SetIndent(0);
+            log.Info("");
+            log.Info("****** BOTS ******");
+            log.SetIndent(1);
+            log.Info("4) List Bots");
+            log.Info("5) Add Or Upload Bot");
+            log.SetIndent(0);
+            log.Info("");
+            log.Info("****** TOURNAMENTS ******");
+            log.SetIndent(1);
+            log.Info("6) List Tournaments");
+            log.Info("7) Create Tournament");
+            log.SetIndent(0);
+            log.Info("");
+            log.Info("");
+            return log.GetInt("Select a function", 1, 7);
+        }
+
         private async Task AddOrUplaodBot(Logger log, Service service, string path = null)
         {
             BotUploader u = new BotUploader();
@@ -163,11 +206,26 @@ namespace ServiceUtility
 
         private async Task CreateTournament(Logger log, Service service)
         {
-            log.Info("Creating tournament...");
+            log.Info();
+            string name = log.GetString("What's the name of the tournament");
             int games = log.GetInt("How many games would you like to be played", 1, 1000);
-            int botsPerGame = log.GetInt("How many bots would you like in each game", 2, 4);
-            string reason = log.GetString("What's the reason for the creation of this tournament");
-            KokkaKoroTournament tour = await service.CreateTournament(new CreateTournamentOptions() { ReasonForCreation = reason, NumberOfGames = games, BotsPerGame = botsPerGame });
+            List<string> bots = null;
+            if(log.GetDecission("Would you like to pick which bots will be in the tournament (if not, all bots on the service will be used)"))
+            {
+                bots = new List<string>();
+                List<KokkaKoroBot> kokkBots = await service.ListBots();
+                do
+                {
+                    // Ask for a bot.
+                    KokkaKoroBot bot = await GetBot(log, service, false, true, kokkBots);
+                    bots.Add(bot.Name);
+                }
+                while (bots.Count < 2 || log.GetDecission("Add another bot"));
+            }
+            int botsPerGame = log.GetInt("How many bots would you like in each game (if the bots selected count is less than this number repeats will be added)", 2, 4);
+            log.Info();
+            log.Info("Creating tournament...");
+            KokkaKoroTournament tour = await service.CreateTournament(new CreateTournamentOptions() { Name = name, NumberOfGames = games, BotsPerGame = botsPerGame, Bots = bots });
             log.Info($"New tournament started! [{tour.Id}]");
         }
 
@@ -184,7 +242,7 @@ namespace ServiceUtility
             GetGameLogsResponse response = await service.GetGameLogs(new GetGameLogsOptions() { GameId = game.Id });
 
             log.Info();
-            if (log.GetDecission("Would you like to print the logs or save them to your desktop (y=print; n=save)"))
+            if (log.GetDecission("Would you like to print the logs or save them to your desktop (p=print; s=save)", "p", "s"))
             {
                 // Print the game.
                 log.Info();
@@ -216,13 +274,14 @@ namespace ServiceUtility
             {
                 log.Info();
                 // Save the logs to the folder given.
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);// GetString(log, "Enter a folder path to write the logs to.");
+                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + $"/GameLogs-{game.GameName}-{game.Id}/";// GetString(log, "Enter a folder path to write the logs to.");
+                Directory.CreateDirectory(path);
                 log.Info($"Writing logs to {path}...");
-                WriteFile($"{path}/{game.Id}-GameLog.json", JsonConvert.SerializeObject(response.GameLog, Formatting.Indented));
+                WriteFile($"{path}/GameLog.json", JsonConvert.SerializeObject(response.GameLog, Formatting.Indented));
                 foreach (KokkaKoroBotLog blog in response.BotLogs)
                 {
-                    WriteFile($"{path}/{game.Id}-{blog.Bot.Name}-{blog.Player.PlayerName}-stdout.txt", blog.StdOut);
-                    WriteFile($"{path}/{game.Id}-{blog.Bot.Name}-{blog.Player.PlayerName}-stderr.txt", blog.StdErr);
+                    WriteFile($"{path}/{blog.Bot.Name}-{blog.Player.PlayerName}-stdout.txt", blog.StdOut);
+                    WriteFile($"{path}/{blog.Bot.Name}-{blog.Player.PlayerName}-stderr.txt", blog.StdErr);
                 }
                 log.Info($"Logs written to {path}");
             }
@@ -246,7 +305,7 @@ namespace ServiceUtility
             log.Info($"New game created. [{game.Id}]");
 
             int count = 0;
-            while(true)
+            while(game.Players.Count < 4)
             {
                 if (!log.GetDecission($"Would like you to add{(count == 0 ? "" : " another")} a bot"))
                 {
@@ -263,7 +322,7 @@ namespace ServiceUtility
                 string botName = log.GetString("Enter a friendly name for the bot");
 
                 log.Info("Adding bot...");
-                await service.AddBotToGame(new AddHostedBotOptions()
+                game = await service.AddBotToGame(new AddHostedBotOptions()
                 {
                     BotName = bot.Name,
                     GameId = game.Id,
@@ -291,7 +350,7 @@ namespace ServiceUtility
             log.Info($"Id: {game.Id}");
             log.Info($"State: {game.State}");
             log.Info($"Created By: {game.CreatedBy}");
-            log.Info($"Created: {game.Created}");
+            log.Info($"Created: {game.Created.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")}");
             log.Info($"Started: {(game.Started.HasValue ? (game.Started.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Game Engine Started: {(game.GameEngineStarted.HasValue ? (game.GameEngineStarted.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Ended: {(game.Eneded.HasValue ? (game.Eneded.Value - game.Created).TotalSeconds + "s" : "")}");
@@ -342,33 +401,6 @@ namespace ServiceUtility
             log.DecreaseIndent();
         }
 
-        private int GetCommand(Logger log)
-        {
-            log.Info("");
-            log.Info("");
-            log.Info("##### GAMES ######");
-            log.SetIndent(1);
-            log.Info("1) List Games");
-            log.Info("2) Get Game Logs");
-            log.Info("3) Create Game");
-            log.SetIndent(0);
-            log.Info("");
-            log.Info("##### BOTS  ######");
-            log.SetIndent(1);
-            log.Info("4) List Bots");
-            log.Info("5) Add Or Upload Bot");
-            log.SetIndent(0);
-            log.Info("");
-            log.Info("##### TOURNAMENTS ######");
-            log.SetIndent(1);
-            log.Info("6) List Tournaments");
-            log.Info("7) Create Tournament");
-            log.SetIndent(0);
-            log.Info("");
-            log.Info("");
-            return log.GetInt("Select a function", 1, 7);
-        }
-
         private async Task<KokkaKoroGame> GetGame(Logger log, Service service, bool showDetails = false, bool waitForDecision = true)
         {
             List<KokkaKoroGame> games = await service.ListGames();
@@ -392,7 +424,7 @@ namespace ServiceUtility
                 }
                 else
                 {
-                    log.Info($"{count}) {game.GameName} - Created {(DateTime.UtcNow - game.Created).TotalMinutes} minutes ago. - {game.Id}");
+                    log.Info($"{count}) {game.GameName} - Created {game.Created.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")} - {game.Id}");
                 }
                 count++;
             }          
@@ -405,9 +437,12 @@ namespace ServiceUtility
             return null;
         }
 
-        private async Task<KokkaKoroBot> GetBot(Logger log, Service service, bool showDetails = false, bool waitForDecision = true)
+        private async Task<KokkaKoroBot> GetBot(Logger log, Service service, bool showDetails = false, bool waitForDecision = true, List<KokkaKoroBot> bots = null)
         {
-            List<KokkaKoroBot> bots = await service.ListBots();
+            if (bots == null)
+            {
+                bots = await service.ListBots();
+            }
             if (bots.Count == 0)
             {
                 log.Info("There are no bots on the service!");
@@ -475,11 +510,13 @@ namespace ServiceUtility
         
         private void PrintTournament(Logger log, KokkaKoroTournament t)
         {
+            log.Info($"Name: {t.Name}");
             log.Info($"Id: {t.Id}");
             log.Info($"Status: {t.Status}");
-            log.Info($"Reason: {t.Reason}");
-            log.Info($"Created For: {t.CreatedFor}");
-            log.Info($"Error if failed: {t.MessageIfError}");
+            log.Info($"Created: {t.CreatedAt.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")}");
+            log.Info($"Ended: {(t.EndedAt.HasValue ? t.EndedAt.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt") : "Still running.")}");
+            log.Info($"Created By: {t.CreatedFor}");
+            log.Info($"Error if failed: {(String.IsNullOrWhiteSpace(t.MessageIfError) ? "None" : t.MessageIfError)}");
             log.Info("Games:");
             log.IncreaseIndent();
             foreach(KokkaKoroGame game in t.Games)
@@ -499,7 +536,7 @@ namespace ServiceUtility
             log.IncreaseIndent();
             foreach (TournamentResult result in t.Results)
             {
-                log.Info($"{result.BotName}: {result.Wins} wins, {result.Losses} losses, {result.Errors} errors");
+                log.Info($"{result.BotName}: {result.Score} score, {result.Wins} wins, {result.Losses} losses, {result.InProgress} in progress, {result.Errors} errors");
             }
             log.DecreaseIndent();
         }

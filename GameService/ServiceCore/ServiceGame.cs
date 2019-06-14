@@ -72,6 +72,11 @@ namespace GameService.ServiceCore
             return m_createdAt;
         }
 
+        public bool IsComplete()
+        {
+            return m_state == KokkaKoroGameState.Complete;
+        }
+
         public bool ValidatePassword(string userPassword)
         {
             if(String.IsNullOrWhiteSpace(m_password))

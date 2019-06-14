@@ -403,9 +403,9 @@ namespace KokkaKoro
             {
                 throw new KokkaKoroException("Options are required!", false);
             }
-            if (String.IsNullOrWhiteSpace(options.ReasonForCreation))
+            if (String.IsNullOrWhiteSpace(options.Name))
             {
-                throw new KokkaKoroException("A reason is required!", false);
+                throw new KokkaKoroException("A name is required!", false);
             }
             if (options.BotsPerGame < 2 || options.BotsPerGame > 4)
             {

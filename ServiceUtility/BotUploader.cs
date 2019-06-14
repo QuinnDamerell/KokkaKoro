@@ -17,19 +17,47 @@ namespace ServiceUtility
 
         public async Task DoUpload(Logger log, Service service, string optPath = null)
         {
-            string path = optPath;
-            if (String.IsNullOrWhiteSpace(path))
+            Console.Clear();
+            log.Info("");
+            log.Info("Welcome to the bot uploader!");
+            log.Info("****************************");
+            log.Info("");
+            log.Info("This utility allows you to upload bots for the Kokka Koro game service.");
+            log.Info("The bots must be platform independent dotnet 2.2 compiled binaries.");
+            log.Info("Thus, the entry binary should be a (.dll).");
+            log.Info();
+            log.Info("To generate these files, run...");
+            log.Info("   `dotnet publish -c Release <your bot>.csproj`");
+            log.Info("The files will then be located...");
+            log.Info("   `<project root>/bin/Release/netcoreapp2.2/publish/`");
+            log.Info();
+            if (log.GetDecission("Got it"))
             {
-                if(log.GetDecission("No path passed, assume the current directory is the bot directory"))
-                {
-                    // For now, assume the current folder.
-                    path = Directory.GetCurrentDirectory();
-                }
-                else
-                {
-                    path = log.GetString("Enter a bot file path");
-                }               
+                log.Info("Great! Let's go!");
             }
+            else
+            {
+                log.Info("Too bad! Let's go!");
+            }
+            log.Info();
+
+            string path = optPath;
+            do
+            {
+                if (String.IsNullOrWhiteSpace(path))
+                {
+                    path = GetLastPath();
+                    if (path != null)
+                    {
+                        log.Info($"Previous path found: [{path}]");
+                        if (log.GetDecission("Would you like to use the previous bot path"))
+                        {
+                            break;
+                        }
+                    }                
+                    path = log.GetString("Enter a the file path to the publish directory");
+                }
+            } while (false);                
 
             log.Info($"Bot path set to [{path}]");
 
@@ -72,14 +100,22 @@ namespace ServiceUtility
                 else
                 {
                     log.Info("No bot info file was found, making a new one...");
+                    log.Info();
+                    log.Info("This will create a file called botinfo.json in the directory. That file is what defines your bot name and details.");
+                    log.Info("   Name     - The name of your bot. [a-z,0-9]");
+                    log.Info("   Password - Protects your bot from unloaders that aren't yourself. ");
+                    log.Info("              This is stored in the bot info file and needs to be remembered to upload update.");
+                    log.Info("   EntryDll - The name of the dotnet dll with the main() function. (usually the project name)");
+                    log.Info("   Version  - [Major].[Minor].[Revision] Must increase for updates.");
+                    log.Info();
                     var dlls = ListDlls(path);
                     if (dlls.Count == 0)
                     {
                         log.Info("No dlls were found in the directory, we failed to upload the new bot.");
                         return;
                     }
-                    string botName = log.GetString("Please enter a bot name");
-                    string password = log.GetString("Please enter a password to protect the bot upload");
+                    string botName = log.GetString("Please enter a bot name", true);
+                    string password = log.GetString("Please enter a password");
                     log.Info();
                     int count = 1;
                     foreach(string dll in dlls)
@@ -90,19 +126,19 @@ namespace ServiceUtility
                     int dllIndex = log.GetInt("Select which dll is the main entry dll for the bot", 1, dlls.Count -1) - 1;
                     bot = new KokkaKoroBot() { Name = botName, EntryDll = dlls[dllIndex], Password = password, Major = 1, Minor = 0, Revision = 0 };
                 }
-
             }
 
-            if(bot == null)
+            if(bot == null || !bot.IsValid())
             {
                 log.Info("Failed to get a valid bot info. Upload failed.");
                 return;
             }
                         
             log.Info($"We have a valid bot info file. {bot.Name} - {bot.Major}.{bot.Minor}.{bot.Revision}");
+            SetLastPath(path);
 
             // Make sure the dll file still exists
-            if(!File.Exists($"{path}/{bot.EntryDll}"))
+            if (!File.Exists($"{path}/{bot.EntryDll}"))
             {
                 log.Info($"The bot entry dll [{bot.EntryDll}] can't be found in the current bot path.");
                 return;
@@ -131,9 +167,9 @@ namespace ServiceUtility
             catch(Exception e)
             {
                 log.Info();
-                log.Info();
-                log.Info($"!!! Bot Upload Failed: [{e.Message}]");
-                log.Info();
+                log.Info("!!!");
+                log.Info($"!!! Bot Upload Failed: [{e.Message}] !!!");
+                log.Info("!!!");
                 log.Info();
                 return;
             }
@@ -220,6 +256,25 @@ namespace ServiceUtility
                 Bot = bot,
                 Base64EncodedZipedBotFiles = zipFile
             };
+        }
+
+        private string GetLastPath()
+        {
+            try
+            {
+                return File.ReadAllText("LastBotFilePath.txt");
+            }
+            catch (Exception) { }
+            return null;
+        }
+
+        private void SetLastPath(string path)
+        {
+            try
+            {
+                File.WriteAllText("LastBotFilePath.txt", path);
+            }
+            catch (Exception) { }
         }
     }
 }

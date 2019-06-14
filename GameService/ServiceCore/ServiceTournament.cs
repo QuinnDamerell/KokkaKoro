@@ -16,28 +16,30 @@ namespace GameService.ServiceCore
         int m_numberOfGames;
         int m_botsPerGame;
         List<string> m_botsToUse;
-        string m_reason;
+        string m_name;
         string m_createdBy;
-        DateTime m_createdAt;
         string m_error;
         Thread m_thread;
         List<ServiceGame> m_games = new List<ServiceGame>();
 
-        public ServiceTournament(int gameCount, int playersPerGame, string reason, string createdBy, List<string> bots)
+        DateTime m_createdAt;
+        DateTime? m_finishedAt;
+
+        public ServiceTournament(int gameCount, int playersPerGame, string name, string createdBy, List<string> bots)
         {
             m_id = Guid.NewGuid();
             m_status = TournamentStatus.Created;
             m_numberOfGames = gameCount;
             m_botsPerGame = playersPerGame;
             m_botsToUse = bots;
-            m_reason = reason;
+            m_name = name;
             m_createdBy = createdBy;
             m_createdAt = DateTime.UtcNow;
         }
 
         public void Start()
         {
-            m_status = TournamentStatus.Running;
+            m_status = TournamentStatus.SettingUp;
             m_thread = new Thread(WorkerThread);
             m_thread.Start();
         }
@@ -65,6 +67,7 @@ namespace GameService.ServiceCore
                 SetError($"Exception in worker thread. {e.Message}");
                 m_status = TournamentStatus.Error;
             }
+            m_finishedAt = DateTime.UtcNow;
         }
 
         private async Task<bool> DoWork()
@@ -74,7 +77,7 @@ namespace GameService.ServiceCore
             GameMaster gm = GameMaster.Get();
             for (int g = 0; g < m_numberOfGames; g++)
             {
-                ServiceGame game = gm.CreateGame("Game" + g, null, null, "TournamentController");        
+                ServiceGame game = gm.CreateGame($"Tournament-{m_name}-{m_id}-game-{g}", null, null, "TournamentController");        
                 for (int c = 0; c < m_botsPerGame; c++)
                 {
                     KokkaKoroResponse<object> response = await game.AddHostedBot(m_botsToUse[botIndex], m_botsToUse[botIndex]);
@@ -92,6 +95,9 @@ namespace GameService.ServiceCore
                     }
                 }
 
+                // Update the status
+                m_status = TournamentStatus.Running;
+
                 // Start the game.
                 string error = game.StartGame();
                 if(!String.IsNullOrWhiteSpace(error))
@@ -105,6 +111,30 @@ namespace GameService.ServiceCore
                 {
                     m_games.Add(game);
                 }  
+            }
+
+            // Wait for all the games to finish.
+            while(true)
+            {
+                bool allComplete = true;
+                lock(m_games)
+                {
+                    foreach(ServiceGame g in m_games)
+                    {
+                        if(!g.IsComplete())
+                        {
+                            allComplete = false;
+                            break;
+                        }
+                    }
+                }
+                if(allComplete)
+                {
+                    break;
+                }
+
+                // If we aren't done, sleep and try again.
+                await Task.Delay(1000);
             }
             return true;
         }
@@ -216,7 +246,9 @@ namespace GameService.ServiceCore
                 Status = m_status,
                 MessageIfError = m_error,
                 CreatedFor = m_createdBy,
-                Reason = m_reason,
+                CreatedAt = m_createdAt,
+                EndedAt = m_finishedAt,
+                Name = m_name,
                 Games  = gameInfo,
                 Results = results
             };

@@ -37,9 +37,9 @@ namespace GameService.ServiceCore
             {
                 return KokkaKoroResponse<object>.CreateError("Command options are required.");
             }
-            if (String.IsNullOrWhiteSpace(request.CommandOptions.ReasonForCreation))
+            if (String.IsNullOrWhiteSpace(request.CommandOptions.Name))
             {
-                return KokkaKoroResponse<object>.CreateError("A reason for creation is required.");
+                return KokkaKoroResponse<object>.CreateError("A name is required.");
             }
             int botsPerGame = request.CommandOptions.BotsPerGame;
             if (botsPerGame < 2 || botsPerGame > 4)
@@ -62,7 +62,7 @@ namespace GameService.ServiceCore
             }
 
             // Create it
-            ServiceTournament tournament = new ServiceTournament(numberOfGames, botsPerGame, request.CommandOptions.ReasonForCreation, userName, bots);
+            ServiceTournament tournament = new ServiceTournament(numberOfGames, botsPerGame, request.CommandOptions.Name, userName, bots);
             lock (m_tournaments)
             {
                 m_tournaments.Add(tournament.GetId(), tournament);

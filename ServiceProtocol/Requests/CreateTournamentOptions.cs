@@ -7,7 +7,7 @@ namespace ServiceProtocol.Requests
     public class CreateTournamentOptions
     {
         // Required - The reason why the tournament is being created.
-        public string ReasonForCreation;
+        public string Name;
 
         // Required - the number of games the tournament should be.
         public int NumberOfGames;
