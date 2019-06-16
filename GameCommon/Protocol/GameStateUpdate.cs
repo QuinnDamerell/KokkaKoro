@@ -68,7 +68,7 @@ namespace GameCommon.Protocol
         [JsonConverter(typeof(StringEnumConverter))]
         public StateUpdateType Type;
 
-        // A list of all players that are involved with invoking this update.
+        // A list of all players that are involved with invoking this update or who are directly effected by it.
         public List<int> InvolvedPlayerIndexes;
 
         // The reason for the game update.
