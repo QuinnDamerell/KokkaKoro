@@ -26,10 +26,25 @@ namespace GameCommon.Protocol
         //
         // Helpers
         // 
-        public static GameLog CreateGameStateUpdate<T>(GameState state, StateUpdateType type, string message, T details)
+        public static GameLog CreateGameStateUpdate<T>(GameState state, StateUpdateType type, string message, bool allPlayers, T details)
         {
-            return new GameLog() { StateUpdate = GameStateUpdate<object>.Create(state, type, message, details) };
+            if(allPlayers == false)
+            {
+                throw new GameErrorException("CreateGameStateUpdate can't be used with allPlayer == false.");
+            }
+            return new GameLog() { StateUpdate = GameStateUpdate<object>.Create(state, type, message, details, allPlayers) };
         }
+
+        public static GameLog CreateGameStateUpdate<T>(GameState state, StateUpdateType type, string message, int playerIndex, T details)
+        {
+            return new GameLog() { StateUpdate = GameStateUpdate<object>.Create(state, type, message, details, playerIndex) };
+        }
+
+        public static GameLog CreateGameStateUpdate<T>(GameState state, StateUpdateType type, string message, List<int> playerIndexs, T details)
+        {
+            return new GameLog() { StateUpdate = GameStateUpdate<object>.Create(state, type, message, details, playerIndexs) };
+        }
+
 
         public static GameLog CreateActionRequest(GameState state, List<GameActionType> actions)
         {

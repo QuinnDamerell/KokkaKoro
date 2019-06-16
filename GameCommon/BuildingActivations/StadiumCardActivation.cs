@@ -44,7 +44,7 @@ namespace GameCommon.BuildingActivations
             invokedPlayer.Coins += totalTaken;
 
             // Log it
-            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.StadiumCollection, $"{invokedPlayer.Name} earned {m_amount} coins from all players (sum {totalTaken}) for a stadium action.",
+            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.StadiumCollection, $"{invokedPlayer.Name} earned {m_amount} coins from all players (sum {totalTaken}) for a stadium action.", true,
                         new StadiumCollectionDetails() { TotalRecieved = totalTaken, PlayerIndexPaidTo = playerIndexInvokedOn, MaxTakenFromEachPlayer = m_amount }));                 
         }
 

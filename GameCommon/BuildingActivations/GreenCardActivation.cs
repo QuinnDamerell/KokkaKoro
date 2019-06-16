@@ -76,7 +76,7 @@ namespace GameCommon.BuildingActivations
                 p.Coins += totalEarned;
 
                 // Log it
-                log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalEarned} from a {b.GetName()}.{bonus}",
+                log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalEarned} from a {b.GetName()}.{bonus}", p.PlayerIndex,
                             new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = totalEarned, PlayerIndex = playerIndexInvokedOn }));
             }
             else if(m_type == GreenCardType.PerProduct)
@@ -86,7 +86,7 @@ namespace GameCommon.BuildingActivations
                 p.Coins += totalEarned;
 
                 // Log it
-                log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalEarned} from a {b.GetName()}.{bonus}",
+                log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalEarned} from a {b.GetName()}.{bonus}", p.PlayerIndex,
                             new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = totalEarned, PlayerIndex = playerIndexInvokedOn }));
             }
             else

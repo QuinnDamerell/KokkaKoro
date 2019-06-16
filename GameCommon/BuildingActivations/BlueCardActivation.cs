@@ -40,7 +40,7 @@ namespace GameCommon.BuildingActivations
             p.Coins += totalAmount;
 
             // Log it
-            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalAmount} from a {b.GetName()}.{bonus}",
+            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.EarnIncome, $"{p.Name} earned {totalAmount} from a {b.GetName()}.{bonus}", p.PlayerIndex,
                         new EarnIncomeDetails() { BuildingIndex = buildingIndex, Earned = m_amount, PlayerIndex = playerIndexInvokedOn }));                 
         }
 

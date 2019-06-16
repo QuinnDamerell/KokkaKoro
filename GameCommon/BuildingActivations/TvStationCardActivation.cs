@@ -62,7 +62,8 @@ namespace GameCommon.BuildingActivations
             activePlayer.Coins += takeable;
 
             // Log the transaction.
-            log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.CoinPayment, $"{sacrificePlayer.Name} was chosen to pay {activePlayer.Name} {takeable} coins for the TV Station.",
+            List<int> playerIndexes = new List<int>() { activePlayer.PlayerIndex, sacrificePlayer.PlayerIndex };
+            log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.CoinPayment, $"{sacrificePlayer.Name} was chosen to pay {activePlayer.Name} {takeable} coins for the TV Station.", playerIndexes,
                         new CoinPaymentDetials() { BuildingIndex = BuildingRules.TvStation, Payment = takeable, PlayerIndexPaidTo = activePlayer.PlayerIndex, PlayerIndexTakenFrom = sacrificePlayer.PlayerIndex }));
         }
 

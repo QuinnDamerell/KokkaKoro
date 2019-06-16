@@ -68,15 +68,34 @@ namespace GameCommon.Protocol
         [JsonConverter(typeof(StringEnumConverter))]
         public StateUpdateType Type;
 
+        // A list of all players that are involved with invoking this update.
+        public List<int> InvolvedPlayerIndexes;
+
         // The reason for the game update.
         public string Reason;
 
         // Optionally, additional details about the update. The type of object can be determined by the StateUpdateType.
         public T Details;
 
-        public static GameStateUpdate<T> Create(GameState state, StateUpdateType type, string reason, T details)
+        public static GameStateUpdate<T> Create(GameState state, StateUpdateType type, string reason, T details, int playerIndex)
         {
-            return new GameStateUpdate<T>() { State = state, Details = details, Reason = reason, Type = type };
+            List<int> players = new List<int>() { playerIndex };
+            return new GameStateUpdate<T>() { State = state, Details = details, Reason = reason, Type = type, InvolvedPlayerIndexes = players};
+        }
+
+        public static GameStateUpdate<T> Create(GameState state, StateUpdateType type, string reason, T details, List<int> playerIndexes)
+        {
+            return new GameStateUpdate<T>() { State = state, Details = details, Reason = reason, Type = type, InvolvedPlayerIndexes = playerIndexes };
+        }
+
+        public static GameStateUpdate<T> Create(GameState state, StateUpdateType type, string reason, T details, bool allPlayers)
+        {
+            List<int> players = new List<int>();
+            foreach(GamePlayer p in state.Players)
+            {
+                players.Add(p.PlayerIndex);
+            }
+            return new GameStateUpdate<T>() { State = state, Details = details, Reason = reason, Type = type, InvolvedPlayerIndexes = players };
         }
     }
 }

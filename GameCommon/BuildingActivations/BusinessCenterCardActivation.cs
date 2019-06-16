@@ -38,7 +38,7 @@ namespace GameCommon.BuildingActivations
             if (options.SkipAction)
             {
                 // Log the transaction.
-                log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.ActionSkip, $"{activePlayer.Name} has chosen to skip their {GameActionType.BusinessCenterSwap.ToString()}.",
+                log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.ActionSkip, $"{activePlayer.Name} has chosen to skip their {GameActionType.BusinessCenterSwap.ToString()}.", activePlayer.PlayerIndex,
                            new ActionSkipDetails() { PlayerIndex = activePlayer.PlayerIndex, SkippedAction = GameActionType.BusinessCenterSwap }));
                 return;
             }
@@ -85,7 +85,8 @@ namespace GameCommon.BuildingActivations
             sacrificePlayer.OwnedBuildings[give.GetBuildingIndex()]++;
 
             // Log the swap.
-            log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.BusinessCenterSwap, $"{activePlayer.Name} chose to take {take.GetName()} from {sacrificePlayer.Name} in exchange for {give.GetName()}.",
+            List<int> playerIndexes = new List<int>() { activePlayer.PlayerIndex, sacrificePlayer.PlayerIndex };
+            log.Add(GameLog.CreateGameStateUpdate(stateHelper.GetState(), StateUpdateType.BusinessCenterSwap, $"{activePlayer.Name} chose to take {take.GetName()} from {sacrificePlayer.Name} in exchange for {give.GetName()}.", playerIndexes,
              new BusinessCenterSwapDetails() { PlayerIndex1 = activePlayer.PlayerIndex, PlayerIndex2 = sacrificePlayer.PlayerIndex, BudingIndexPlayer1Recieved = take.GetBuildingIndex(), BudingIndexPlayer2Recieved = give.GetBuildingIndex() }));
         }
 

@@ -208,7 +208,7 @@ namespace GameCore
 
             // Log!
             actionLog.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.GameEnd, 
-                $"{(winner != null ? $"{winner.Name} has won! " : "")}The game has ended because '{reason.ToString()}'",
+                $"{(winner != null ? $"{winner.Name} has won! " : "")}The game has ended because '{reason.ToString()}'", true,
                 new GameEndDetails() { PlayerIndex = playerIndex, Reason = reason }));
 
             // Return success.
@@ -361,7 +361,7 @@ namespace GameCore
             m_state.CurrentTurnState.HasGameStarted = true;
 
             // Broadcast a game start event.
-            log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.GameStart, "Game Starting!", null));
+            log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.GameStart, "Game Starting!", true, null));
 
             // And add a request for the first player to go.
             BuildPlayerActionRequest(log, stateHelper);
@@ -415,7 +415,7 @@ namespace GameCore
                 newPlayerIndex = m_state.CurrentTurnState.PlayerIndex;
 
                 // Log it
-                actionLog.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.ExtraTurn, $"{stateHelper.Player.GetPlayer().Name} rolled double {m_state.CurrentTurnState.DiceResults[0]}s and has an Amusement Park, so they get to take an extra turn!", null));
+                actionLog.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.ExtraTurn, $"{stateHelper.Player.GetPlayer().Name} rolled double {m_state.CurrentTurnState.DiceResults[0]}s and has an Amusement Park, so they get to take an extra turn!", newPlayerIndex, null));
             }
 
             // Check for a player index roll over.
@@ -483,11 +483,12 @@ namespace GameCore
                 int result = m_random.RandomInt(1, 6);
                 sum += result;
                 m_state.CurrentTurnState.DiceResults.Add(result);
-            }  
+            }
 
             // Create an update
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.RollDiceResult, $"Player {stateHelper.Player.GetPlayerName()} rolled {sum}.",
-                new RollDiceDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayer().PlayerIndex }));
+            GamePlayer p = stateHelper.Player.GetPlayer();
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.RollDiceResult, $"Player {p.Name} rolled {sum}.", p.PlayerIndex,
+                new RollDiceDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = p.PlayerIndex }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
@@ -533,8 +534,9 @@ namespace GameCore
             }
             rollStr += "]";
 
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.CommitDiceResults, $"Player {stateHelper.Player.GetPlayerName()} committed their roll of {rollStr} after {m_state.CurrentTurnState.Rolls} rolls.",
-                new CommitDiceResultsDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = stateHelper.Player.GetPlayer().PlayerIndex, Rolls = m_state.CurrentTurnState.Rolls }));
+            GamePlayer p = stateHelper.Player.GetPlayer();
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.CommitDiceResults, $"Player {p.Name} committed their roll of {rollStr} after {m_state.CurrentTurnState.Rolls} rolls.", p.PlayerIndex,
+                new CommitDiceResultsDetails() { DiceResults = m_state.CurrentTurnState.DiceResults, PlayerIndex = p.PlayerIndex, Rolls = m_state.CurrentTurnState.Rolls }));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);
@@ -595,9 +597,9 @@ namespace GameCore
 
             // Update the current turn state.
             m_state.CurrentTurnState.HasBougthBuilding = true;
-            
+
             // Create an update
-            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.BuildBuilding, $"Player {stateHelper.Player.GetPlayerName()} built a {stateHelper.BuildingRules[options.BuildingIndex].GetName()}.",
+            log.Add(GameLog.CreateGameStateUpdate(m_state, StateUpdateType.BuildBuilding, $"Player {p.Name} built a {stateHelper.BuildingRules[options.BuildingIndex].GetName()}.", p.PlayerIndex,
                 new BuildBuildingDetails() { PlayerIndex = p.PlayerIndex, BuildingIndex = options.BuildingIndex }));
 
             // Validate things are good.
@@ -629,7 +631,8 @@ namespace GameCore
             m_state.CurrentTurnState.HasEndedTurn = true;
 
             // Log it.
-            log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.EndTurn, $"Player {stateHelper.Player.GetPlayerName()} has ended their turn.", null));
+            GamePlayer p = stateHelper.Player.GetPlayer();
+            log.Add(GameLog.CreateGameStateUpdate<object>(m_state, StateUpdateType.EndTurn, $"Player {p.Name} has ended their turn.", p.PlayerIndex, null));
 
             // Validate things are good.
             ThrowIfInvalidState(stateHelper);

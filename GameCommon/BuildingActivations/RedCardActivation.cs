@@ -49,7 +49,8 @@ namespace GameCommon.BuildingActivations
             invokedPlayer.Coins += amountToTake;
 
             // Log it
-            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.CoinPayment, $"{activePlayer.Name} paid {amountToTake} coins to {invokedPlayer.Name} for some yummy food from a {b.GetName()}.{bonus}",
+            List<int> playerIndexes = new List<int>() { invokedPlayer.PlayerIndex, activePlayer.PlayerIndex };
+            log.Add(GameLog.CreateGameStateUpdate(state, StateUpdateType.CoinPayment, $"{activePlayer.Name} paid {amountToTake} coins to {invokedPlayer.Name} for some yummy food from a {b.GetName()}.{bonus}", playerIndexes,
                         new CoinPaymentDetials() { BuildingIndex = buildingIndex, Payment = amountToTake, PlayerIndexPaidTo = playerIndexInvokedOn, PlayerIndexTakenFrom = activePlayer.PlayerIndex }));                 
         }
 
