@@ -4,6 +4,7 @@ using ServiceProtocol.Common;
 using ServiceProtocol.Requests;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -22,22 +23,24 @@ namespace ServiceUtility
             log.Info("Welcome to the bot uploader!");
             log.Info("****************************");
             log.Info("");
-            log.Info("This utility allows you to upload bots for the Kokka Koro game service.");
-            log.Info("The bots must be platform independent dotnet 2.2 compiled binaries.");
-            log.Info("Thus, the entry binary should be a (.dll).");
-            log.Info();
-            log.Info("To generate these files, run...");
-            log.Info("   `dotnet publish -c Release <your bot>.csproj`");
-            log.Info("The files will then be located...");
-            log.Info("   `<project root>/bin/Release/netcoreapp2.2/publish/`");
-            log.Info();
-            if (log.GetDecission("Got it"))
+            if (!IsFirstRun())
             {
-                log.Info("Great! Let's go!");
-            }
-            else
-            {
-                log.Info("Too bad! Let's go!");
+                log.Info("This utility allows you to upload bots for the Kokka Koro game service.");
+                log.Info("The bots must be platform independent dotnet 2.2 compiled binaries.");
+                log.Info("Thus, the entry binary should be a (.dll).");
+                log.Info();
+                log.Info("This tool will now build the project file for you!");
+                log.Info("IF YOU PREVIOUSLY USED THE TOOL, you need to copy the botinfo file into the project path now!");
+                log.Info();
+                if (log.GetDecission("Got it"))
+                {
+                    log.Info("Great! Let's go!");
+                }
+                else
+                {
+                    log.Info("Too bad! Let's go!");
+                }
+                SetFirstRun();
             }
             log.Info();
 
@@ -55,11 +58,23 @@ namespace ServiceUtility
                             break;
                         }
                     }                
-                    path = log.GetString("Enter a the file path to the publish directory");
+                    path = log.GetString("Enter a the file path to the project directory");
                 }
             } while (false);                
 
             log.Info($"Bot path set to [{path}]");
+
+            // Make sure to remove the trailing space
+            if(path.EndsWith('/') || path.EndsWith('\\'))
+            {
+                path = path.Substring(0, path.Length - 1);
+            }
+
+            // Build the project.
+            if(!RunBuild(log, path))
+            {
+                return;
+            }
 
             KokkaKoroBot bot = null;
             while (bot == null)
@@ -137,6 +152,13 @@ namespace ServiceUtility
             log.Info($"We have a valid bot info file. {bot.Name} - {bot.Major}.{bot.Minor}.{bot.Revision}");
             SetLastPath(path);
 
+            // Write the latest bot file to disk in the build directory
+            WriteBotFile(path, bot);
+            
+            // Update the path to the build path.
+            const string buildPath = "/bin/Release/netcoreapp2.2/publish/";
+            path += buildPath;
+
             // Make sure the dll file still exists
             if (!File.Exists($"{path}/{bot.EntryDll}"))
             {
@@ -209,7 +231,7 @@ namespace ServiceUtility
         private bool DoesLocalBotInfoExist(string path)
         {
             return File.Exists($"{path}/{c_botInfoFileName}");
-        }        
+        }      
 
         private void DeleteLocalBotInfo(string path)
         {
@@ -275,6 +297,107 @@ namespace ServiceUtility
                 File.WriteAllText("LastBotFilePath.txt", path);
             }
             catch (Exception) { }
+        }
+
+        private bool IsFirstRun()
+        {
+            try
+            {
+                return File.Exists("IsFirstRun.txt");
+            }
+            catch (Exception) { }
+            return false;
+        }
+
+        private void SetFirstRun()
+        {
+            try
+            {
+                File.WriteAllText("IsFirstRun.txt", "HELLO!");
+            }
+            catch (Exception) { }
+        }
+
+        private bool RunBuild(Logger log, string path)
+        {
+            log.Info("Building bot...");
+
+            // Find the project file.
+            string projectFileName = null;
+            foreach(string file in Directory.EnumerateFiles(path))
+            {
+                if(file.ToLower().EndsWith(".csproj"))
+                {
+                    if(!String.IsNullOrWhiteSpace(projectFileName))
+                    {
+                        log.Info("More than one .csproj was found, this isn't supported.");
+                        return false;                        
+                    }
+                    projectFileName = file.Substring(path.Length + 1);                    
+                }
+            }
+            if(String.IsNullOrWhiteSpace(projectFileName))
+            {
+                log.Error($"No .csproj file found in the path [{path}]");
+                return false;
+            }
+
+            log.Info($"Build project found {projectFileName}");
+
+
+            log.Info($"Building...");
+
+            // Kick off the process to build.
+            Process p = new Process();
+            p.StartInfo.FileName = "dotnet";
+            p.StartInfo.Arguments = $"publish -c Release {projectFileName}";
+            p.StartInfo.WorkingDirectory = path;
+            p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.RedirectStandardError = true;
+            p.Start();
+
+            p.BeginOutputReadLine();
+            p.BeginErrorReadLine();
+            p.ErrorDataReceived += ErrorDataReceived;
+            p.OutputDataReceived += OutputDataReceived;
+            p.WaitForExit();
+
+            if(p.ExitCode == 0)
+            {
+                log.Info($"Build complete!...");
+                return true;
+            }
+            else
+            {
+                log.Error($"Build Failed!");
+                log.Error($"Std Output:");
+                foreach(string output in m_buildOutput)
+                {
+                    log.Error(output);
+                }
+                log.Error($"Std Err:");
+                foreach (string output in m_buildErr)
+                {
+                    log.Error(output);
+                }
+                return false;
+            }
+        }
+
+
+        List<string> m_buildOutput = new List<string>();
+        private void OutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            m_buildOutput.Add(e.Data);
+        }
+
+        List<string> m_buildErr = new List<string>();
+        private void ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            if (e.Data != null)
+            {
+                m_buildErr.Add(e.Data);
+            }
         }
     }
 }
