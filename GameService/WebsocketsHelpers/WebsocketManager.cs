@@ -95,6 +95,10 @@ namespace GameService.WebsocketsHelpers
             {
                 foreach(KeyValuePair<Guid, BetterWebsocket> p in m_activeConnections)
                 {
+                    if(p.Value == null || String.IsNullOrWhiteSpace(p.Value.GetUserName()))
+                    {
+                        continue;
+                    }
                     foreach(string name in userNames)
                     {
                         if (p.Value.GetUserName().Equals(name))

@@ -16,7 +16,7 @@ namespace GameService.ServiceCore
 {
     public class ServiceGame
     {
-        static readonly TimeSpan c_maxGameLength = new TimeSpan(0, 10, 0);
+        static readonly TimeSpan c_maxGameLength = new TimeSpan(0, 20, 0);
         static readonly int c_maxRoundCount      = 5000;
         static readonly int c_maxPlayerCount     = 4;
 
