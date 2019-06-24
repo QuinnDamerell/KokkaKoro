@@ -519,10 +519,11 @@ namespace ServiceUtility
             log.Info($"Created By: {t.CreatedFor}");
             log.Info($"Error if failed: {(String.IsNullOrWhiteSpace(t.MessageIfError) ? "None" : t.MessageIfError)}");
             log.Info("Games:");
+            int count = 1;
             log.IncreaseIndent();
             foreach(KokkaKoroGame game in t.Games)
             {
-                string gameStr = $"{game.Id} - {game.State} - ";
+                string gameStr = $"{count}) {game.Id} - {game.State} - ";
                 if (game.Leaderboard != null)
                 {
                     foreach (KokkaKoroLeaderboardElement le in game.Leaderboard)
@@ -531,13 +532,15 @@ namespace ServiceUtility
                     }
                 }
                 log.Info(gameStr);
+                count++;
             }
             log.DecreaseIndent();
             log.Info("Results:");
             log.IncreaseIndent();
+            t.Results.Sort((TournamentResult l, TournamentResult r) => { return r.Wins - l.Wins; });
             foreach (TournamentResult result in t.Results)
             {
-                log.Info($"{result.BotName}: {result.Score} score, {result.Wins} wins, {result.Losses} losses, {result.InProgress} in progress, {result.Errors} errors");
+                log.Info($"{result.BotName}: {result.Wins} wins, {result.Losses} losses, {result.Score} score, {result.InProgress} in progress, {result.Errors} errors");
             }
             log.DecreaseIndent();
         }
