@@ -168,7 +168,7 @@ namespace GameService.ServiceCore
             Dictionary<string, TournamentResult> botRank = new Dictionary<string, TournamentResult>();
             foreach(KokkaKoroGame g in gameInfo)
             {
-                if(!g.Eneded.HasValue)
+                if(!g.Ended.HasValue)
                 {
                     // If the game hasn't been ended, add them to the pending game.
                     foreach(KokkaKoroPlayer p in g.Players)

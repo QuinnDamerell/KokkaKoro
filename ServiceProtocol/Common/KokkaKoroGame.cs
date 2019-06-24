@@ -65,7 +65,7 @@ namespace ServiceProtocol.Common
         public DateTime? GameEngineStarted;
 
         // Indicates when the game ended.
-        public DateTime? Eneded;
+        public DateTime? Ended;
 
         // Indicates if the game has ended and has a winner.
         public bool HasWinner;

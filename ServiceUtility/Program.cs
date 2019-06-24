@@ -354,7 +354,7 @@ namespace ServiceUtility
             log.Info($"Created: {game.Created.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")}");
             log.Info($"Started: {(game.Started.HasValue ? (game.Started.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Game Engine Started: {(game.GameEngineStarted.HasValue ? (game.GameEngineStarted.Value - game.Created).TotalSeconds + "s" : "")}");
-            log.Info($"Ended: {(game.Eneded.HasValue ? (game.Eneded.Value - game.Created).TotalSeconds + "s" : "")}");
+            log.Info($"Ended: {(game.Ended.HasValue ? (game.Ended.Value - game.Created).TotalSeconds + "s" : "")}");
             log.Info($"Has Winner: {game.HasWinner}");
 
             log.Info($"Leaderboard:");

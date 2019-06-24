@@ -613,7 +613,7 @@ namespace GameService.ServiceCore
                 Created = m_createdAt,
                 Started = m_startedAt,
                 GameEngineStarted = m_gameStartedAt,
-                Eneded = m_gameEndedAt,
+                Ended = m_gameEndedAt,
                 IfFailedFatialError = m_fatalError,
                 Leaderboard = lb,
                 HasWinner = hasWinner
