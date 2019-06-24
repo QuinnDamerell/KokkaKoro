@@ -11,6 +11,8 @@ namespace GameService.ServiceCore
 {
     public class ServiceTournament
     {
+        static readonly int c_manConcurrentGames = 10;
+
         Guid m_id;
         TournamentStatus m_status;
         int m_numberOfGames;
@@ -77,7 +79,12 @@ namespace GameService.ServiceCore
             GameMaster gm = GameMaster.Get();
             for (int g = 0; g < m_numberOfGames; g++)
             {
-                ServiceGame game = gm.CreateGame($"Tournament-{m_name}-{m_id}-game-{g}", null, null, "TournamentController");        
+                ServiceGame game = gm.CreateGame($"Tournament-{m_name}-{m_id}-game-{g}", null, null, "TournamentController");
+                lock (m_games)
+                {
+                    m_games.Add(game);
+                }
+
                 for (int c = 0; c < m_botsPerGame; c++)
                 {
                     KokkaKoroResponse<object> response = await game.AddHostedBot(m_botsToUse[botIndex], m_botsToUse[botIndex]);
@@ -100,17 +107,19 @@ namespace GameService.ServiceCore
 
                 // Start the game.
                 string error = game.StartGame();
-                if(!String.IsNullOrWhiteSpace(error))
+                if (!String.IsNullOrWhiteSpace(error))
                 {
                     SetError(error);
                     return false;
                 }
 
-                // Add the game.
-                lock (m_games)
+                // Once we hit the max concurrent limit, wait to spawn more games.
+                int inProgress = GetInProgressGames();
+                while(inProgress >= c_manConcurrentGames)
                 {
-                    m_games.Add(game);
-                }  
+                    await Task.Delay(200);
+                    inProgress = GetInProgressGames();
+                }
             }
 
             // Wait for all the games to finish.
@@ -268,6 +277,22 @@ namespace GameService.ServiceCore
             if(String.IsNullOrWhiteSpace(m_error))
             {
                 m_error = message;
+            }
+        }
+
+        private int GetInProgressGames()
+        {
+            lock(m_games)
+            {
+                int c = 0;
+                foreach(ServiceGame g in m_games)
+                {
+                    if(!g.IsComplete())
+                    {
+                        c++;
+                    }
+                }
+                return c;
             }
         }
     }

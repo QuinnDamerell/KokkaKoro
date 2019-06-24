@@ -40,6 +40,11 @@ namespace ServiceProtocol.Common
         // 
         // Helper functions
         // 
+        public bool Equals(KokkaKoroBot o)
+        {         
+            return Equals(o, false);
+        }
+
         public bool Equals(KokkaKoroBot o, bool ignoreVersion)
         {
             if(Major != o.Major || Minor != o.Minor || Revision != o.Revision)

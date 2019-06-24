@@ -154,16 +154,12 @@ namespace GameService.ServiceCore
             // Create and start the process.
             process.StartInfo = info;
 
-            // Attach to get the std out and error.
-            process.OutputDataReceived += Process_OutputDataReceived;
-            process.ErrorDataReceived += Process_ErrorDataReceived;
-
             // Start
             process.Start();
 
-            // And start the reading.
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            // Read the output streams.
+            ReadStream(process.StandardOutput, m_stdOutput);
+            ReadStream(process.StandardError, m_stdError);
 
             // Wait for the process to die.
             while (m_state == KokkaKoroBotState.Starting || m_state == KokkaKoroBotState.Joined)
@@ -177,18 +173,18 @@ namespace GameService.ServiceCore
             }
         }
 
-        private void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        private async void ReadStream(StreamReader reader, StringBuilder strBuilder)
         {
-            // Add to the string builder.
-            m_stdError.Append("\r\n");
-            m_stdError.Append(e.Data);
-        }
-
-        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-        {
-            // Add to the string builder.
-            m_stdOutput.Append("\r\n");
-            m_stdOutput.Append(e.Data);
+            while (m_state == KokkaKoroBotState.Starting || m_state == KokkaKoroBotState.Joined)
+            {
+                while (!reader.EndOfStream)
+                {
+                    // Add to the string builder.
+                    string line = await reader.ReadLineAsync();
+                    strBuilder.Append("\r\n");
+                    strBuilder.Append(line);
+                }
+            }
         }
 
         private void SetFatalError(string msg)
@@ -277,7 +273,7 @@ namespace GameService.ServiceCore
             return m_stdError.ToString();
         }
 
-        public void CopyToTemp(string tmpPath)
+        public  void CopyToTemp(string tmpPath)
         {
             // Create the new path and directory for the bot.
             Guid id = Guid.NewGuid();
@@ -289,12 +285,39 @@ namespace GameService.ServiceCore
             foreach (string filePath in files)
             {
                 string file = filePath.Substring(m_localPath.Length);
-                File.Copy(filePath, $"{newLocalPath}/{file}");
+                QuickCopy(filePath, $"{newLocalPath}/{file}");
             }
 
             // Set the new local path
             m_localPath = newLocalPath;
             m_isLocalCopy = true;
+        }
+
+        static void QuickCopy(string source, string destination)
+        {
+            int array_length = (int)Math.Pow(2, 19);
+            byte[] dataArray = new byte[array_length];
+            using (FileStream fsread = new FileStream
+            (source, FileMode.Open, FileAccess.Read, FileShare.None, array_length))
+            {
+                using (BinaryReader bwread = new BinaryReader(fsread))
+                {
+                    using (FileStream fswrite = new FileStream
+                    (destination, FileMode.Create, FileAccess.Write, FileShare.None, array_length))
+                    {
+                        using (BinaryWriter bwwrite = new BinaryWriter(fswrite))
+                        {
+                            for (; ; )
+                            {
+                                int read = bwread.Read(dataArray, 0, array_length);
+                                if (0 == read)
+                                    break;
+                                bwwrite.Write(dataArray, 0, read);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public void EnsureLocalCopyCleanedup()

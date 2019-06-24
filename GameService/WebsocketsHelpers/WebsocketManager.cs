@@ -49,7 +49,7 @@ namespace GameService.WebsocketsHelpers
             KokkaKoroResponse<object> result = await GameMaster.Get().HandleCommand(bsock.GetUserName(), message);
 
             // If we see a user name accepted message returned, grab the user name.
-            if(result.Data != null && result.Data is LoginResponse loginResponse)
+            if(result.Data != null && String.IsNullOrWhiteSpace(bsock.GetUserName()) && result.Data is LoginResponse loginResponse)
             {
                 bsock.SetUserName(loginResponse.UserName);
             }
