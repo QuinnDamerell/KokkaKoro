@@ -6,7 +6,7 @@
     ViewData["Title"] = "Home";
     int officalTournaments = 0;
     int nonOfficalTours = 0;
-    bool mostRecnetGameInProgress = Model.MostRecentTour != null ? Model.MostRecentTour.Status != TournamentStatus.Complete && Model.MostRecentTour.Status != TournamentStatus.Error  : false; 
+    bool mostRecentGameInProgress = Model.MostRecentTour != null ? Model.MostRecentTour.Status != TournamentStatus.Complete && Model.MostRecentTour.Status != TournamentStatus.Error  : false; 
 }
     <head>
         <style>
@@ -36,8 +36,7 @@
     <div>
         <div id="RefreshText">Refreshing in <span id="RefreshValue">10</span>...</div>
         <br />
-        <h3>Bot Leaderboard @if (mostRecnetGameInProgress)
-        {<span class="headingSubText">Games In Progress...</span>}</h3>
+        <h3>Bot Leaderboard @if (mostRecentGameInProgress){<span class="headingSubText">Games In Progress...</span>}</h3>
         @if (Model.MostRecentTour == null)
         {
             <div class="listItem">No Recent Official Tournaments.</div>
@@ -57,7 +56,7 @@
         }
 
         <br />
-        <h3>Official Tournament List <a href="CreateOfficialTournament" class="headingSubText">Start New Tournament</a></h3>
+        <h3>Official Tournament List @if(!mostRecentGameInProgress){<a href="CreateOfficialTournament" class="headingSubText">Start New Tournament</a>}</h3>
         @foreach (KokkaKoroTournament t in Model.Tournaments)
         {
             if (t.IsOfficial)
