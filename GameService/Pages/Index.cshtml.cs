@@ -26,15 +26,16 @@ namespace GameService.Pages
             {
                 Tournaments = tResponse.Tournaments;
             }
-            foreach(KokkaKoroTournament t in Tournaments)
-            {
-                if(MostRecentTour == null || t.CreatedAt > MostRecentTour.CreatedAt)
-                {
-                    MostRecentTour = t;
-                }
-            }
+
             // Sort by the most recent first
             Tournaments.Sort((KokkaKoroTournament l, KokkaKoroTournament r) => { return l.CreatedAt > r.CreatedAt ? -1 : 1; });
+            Games.Sort((KokkaKoroGame l, KokkaKoroGame r) => { return l.Created > r.Created ? -1 : 1; });
+
+            // Get the most recent for the leader board.
+            if(Tournaments.Count > 0)
+            {
+                MostRecentTour = Tournaments[0];
+            }  
         }
 
         public List<KokkaKoroGame> Games = new List<KokkaKoroGame>();

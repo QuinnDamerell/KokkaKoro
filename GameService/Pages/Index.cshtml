@@ -6,11 +6,16 @@
     ViewData["Title"] = "Home";
     int officalTournaments = 0;
     int nonOfficalTours = 0;
+    bool mostRecnetGameInProgress = Model.MostRecentTour != null ? Model.MostRecentTour.Status != TournamentStatus.Complete && Model.MostRecentTour.Status != TournamentStatus.Error  : false; 
 }
     <head>
         <style>
             .listItem {
                 padding-left:20px;
+            }
+            .headingSubText {
+                font-size:15px;
+                padding-left:2px;
             }
         </style>
         <script>
@@ -20,7 +25,7 @@
             setInterval(function () {
                 $("#RefreshValue").html(currentRefreshCountDown);
                 currentRefreshCountDown--;
-                if (currentRefreshCountDown < 0) {
+                if (currentRefreshCountDown == -1) {
                     window.location.reload(1);
                 }
             }, 1000);
@@ -31,7 +36,8 @@
     <div>
         <div id="RefreshText">Refreshing in <span id="RefreshValue">10</span>...</div>
         <br />
-        <h3>Bot Leaderboard</h3>
+        <h3>Bot Leaderboard @if (mostRecnetGameInProgress)
+        {<span class="headingSubText">Games In Progress...</span>}</h3>
         @if (Model.MostRecentTour == null)
         {
             <div class="listItem">No Recent Official Tournaments.</div>
@@ -44,11 +50,14 @@
                 <div class="listItem"><strong>#@count. <span style="display:inline-block;min-width:100px;">@result.BotName</span></strong> - @result.Wins wins, @result.Losses losses, @Math.Round(result.WinRate)% win rate.</div>
                 count++;
             }
+            if (count == 1)
+            {
+                <div class="listItem">No Results Yet...</div>
+            }
         }
 
         <br />
-        <a href="CreateOfficialTournament">Start A New Official Tournament</a>
-        <h3>Official Tournament List</h3>
+        <h3>Official Tournament List <a href="CreateOfficialTournament" class="headingSubText">Start New Tournament</a></h3>
         @foreach (KokkaKoroTournament t in Model.Tournaments)
         {
             if (t.IsOfficial)
