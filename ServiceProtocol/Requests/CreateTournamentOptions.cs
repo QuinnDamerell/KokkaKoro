@@ -6,6 +6,9 @@ namespace ServiceProtocol.Requests
 {
     public class CreateTournamentOptions
     {
+        // Required - If set to true the other fields are ignored as this will be an official match.
+        public bool IsOfficial;
+
         // Required - The reason why the tournament is being created.
         public string Name;
 

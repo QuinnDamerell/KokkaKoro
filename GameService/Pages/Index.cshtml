@@ -1,13 +1,52 @@
 ﻿@page
 @model IndexModel
+@using ServiceProtocol.Common;
+@using Microsoft.AspNetCore.Html;
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Home";
+
+    Func<(KokkaKoroTournament t, int test), IHtmlContent> printTournament =
+        @<h4><strong><a href="ViewTournament?Id=@item.t.Id">@item.t.Name</a></strong> - @item.t.Status, @((DateTime.UtcNow - item.t.CreatedAt).TotalMinutes) minutes ago</h4>;
+
 }
 
+
 <div>
-    <h3>Game List</h3>
-    @foreach (ServiceProtocol.Common.KokkaKoroGame game in Model.Games)
+    <h3>Bot Leaderboard</h3>
+    @if(Model.MostRecentTour == null)
     {
-        <h4><strong><a href="ViewGame?GameId=@game.Id">@game.GameName</a></strong> - @game.State - Created by @game.CreatedBy, @((DateTime.UtcNow-game.Created).TotalMinutes) minutes ago</h4>
+        <h4>No Recent Tournaments.</h4>
+    }
+    else
+    {
+        foreach(TournamentResult result in Model.MostRecentTour.Results)
+        {
+            <h4>@result.BotName - @result.WinRate</h4>
+        }
+    }
+
+
+    <h3>Official Tournament List</h3>
+    @foreach (KokkaKoroTournament t in Model.Tournaments)
+    {
+        if (t.IsOfficial)
+        {
+            printTournament((t, 0));
+        }
+    }
+    <h3>Tournament List</h3>
+    @foreach (KokkaKoroTournament t in Model.Tournaments)
+    {
+        if (!t.IsOfficial)
+        {
+            printTournament((t, 0));
+        }
+    }
+    <h3>Game List</h3>
+    @foreach (KokkaKoroGame game in Model.Games)
+    {
+        <h4><strong><a href="ViewGame?GameId=@game.Id">@game.GameName</a></strong> - @game.State - Created by @game.CreatedBy, @((DateTime.UtcNow - game.Created).TotalMinutes) minutes ago</h4>
     }
 </div>
+
+

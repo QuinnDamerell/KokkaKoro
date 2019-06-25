@@ -61,6 +61,9 @@ namespace ServiceProtocol.Common
         [JsonConverter(typeof(StringEnumConverter))]
         public TournamentStatus Status;
 
+        // Indicates if the tournament is an official bot tournament.
+        public bool IsOfficial;
+
         // When it was created UTC
         public DateTime CreatedAt;
 

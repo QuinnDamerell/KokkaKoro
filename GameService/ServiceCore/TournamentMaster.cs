@@ -62,7 +62,29 @@ namespace GameService.ServiceCore
             }
 
             // Create it
-            ServiceTournament tournament = new ServiceTournament(numberOfGames, botsPerGame, request.CommandOptions.Name, userName, bots);
+            ServiceTournament t = await Create(request.CommandOptions.IsOfficial, numberOfGames, botsPerGame, request.CommandOptions.Name, userName, bots);
+
+            // Return
+            return KokkaKoroResponse<object>.CreateResult(new CreateTournamentResponse() { Tournament = t.GetInfo() });
+        }
+
+        public async Task<ServiceTournament> Create(bool isOffical, int numberOfGames, int botsPerGame, string name, string userName, List<string> botsToUse)
+        {
+            if(isOffical)
+            {
+                // Ignore the other params and setup an official match.
+                numberOfGames = 50;
+                name = "Official Tournament";
+                botsToUse = new List<string>();
+                foreach (KokkaKoroBot b in await StorageMaster.Get().ListBots())
+                {
+                    botsToUse.Add(b.Name);
+                }
+                botsPerGame = Math.Min(4, botsToUse.Count);
+            }
+
+            // Create it
+            ServiceTournament tournament = new ServiceTournament(numberOfGames, botsPerGame, name, userName, isOffical, botsToUse);
             lock (m_tournaments)
             {
                 m_tournaments.Add(tournament.GetId(), tournament);
@@ -70,10 +92,8 @@ namespace GameService.ServiceCore
 
             // Start it
             tournament.Start();
-
-            // Return
-            return KokkaKoroResponse<object>.CreateResult(new CreateTournamentResponse() { Tournament = tournament.GetInfo() });
-        }
+            return tournament;
+        }  
 
         public KokkaKoroResponse<object> List(string command, string userName)
         {

@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameCommon", "GameCommon\Ga
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceUtility", "ServiceUtility\ServiceUtility.csproj", "{E32D43A8-9E49-4E1C-8F5E-062E4F05BD0A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BotUploader", "BotUploader\BotUploader.csproj", "{88F28A05-8F88-48B7-B1A2-FBBD6B60B940}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BotUploader", "BotUploader\BotUploader.csproj", "{88F28A05-8F88-48B7-B1A2-FBBD6B60B940}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

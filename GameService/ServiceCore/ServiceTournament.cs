@@ -17,6 +17,7 @@ namespace GameService.ServiceCore
         TournamentStatus m_status;
         int m_numberOfGames;
         int m_botsPerGame;
+        bool m_isOfficial;
         List<string> m_botsToUse;
         string m_name;
         string m_createdBy;
@@ -27,12 +28,13 @@ namespace GameService.ServiceCore
         DateTime m_createdAt;
         DateTime? m_finishedAt;
 
-        public ServiceTournament(int gameCount, int playersPerGame, string name, string createdBy, List<string> bots)
+        public ServiceTournament(int gameCount, int playersPerGame, string name, string createdBy, bool isOfficial, List<string> bots)
         {
             m_id = Guid.NewGuid();
             m_status = TournamentStatus.Created;
             m_numberOfGames = gameCount;
             m_botsPerGame = playersPerGame;
+            m_isOfficial = isOfficial;
             m_botsToUse = bots;
             m_name = name;
             m_createdBy = createdBy;
@@ -253,6 +255,7 @@ namespace GameService.ServiceCore
             {
                 Id = m_id,
                 Status = m_status,
+                IsOfficial = m_isOfficial,
                 MessageIfError = m_error,
                 CreatedFor = m_createdBy,
                 CreatedAt = m_createdAt,
