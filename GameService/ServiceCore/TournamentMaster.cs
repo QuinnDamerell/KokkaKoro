@@ -73,7 +73,7 @@ namespace GameService.ServiceCore
             if(isOffical)
             {
                 // Ignore the other params and setup an official match.
-                numberOfGames = 50;
+                numberOfGames = 5;
                 name = "Official Tournament";
                 botsToUse = new List<string>();
                 foreach (KokkaKoroBot b in await StorageMaster.Get().ListBots())

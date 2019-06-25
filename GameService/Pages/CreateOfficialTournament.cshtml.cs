@@ -10,10 +10,16 @@ namespace GameService.Pages
 {
     public class CreateOfficialTournamentModel : PageModel
     {
-        public IActionResult OnGet()
+        public async Task<IActionResult> OnGet()
         {
-            TournamentMaster.Get().Create(true, 0, 0, "", "WebHost", null);
-            return new RedirectResult("/");
+            Tournament = await TournamentMaster.Get().Create(true, 0, 0, "", "WebHost", null);
+            if(Tournament != null)
+            {
+                return new RedirectResult($"/");
+                //return new RedirectResult($"ViewTournament/?id={Tournament.GetId()}");
+            }
+            return null;
         }
+        public ServiceTournament Tournament = null;
     }
 }

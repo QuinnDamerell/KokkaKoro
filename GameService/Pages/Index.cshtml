@@ -4,49 +4,90 @@
 @using Microsoft.AspNetCore.Html;
 @{
     ViewData["Title"] = "Home";
-
-    Func<(KokkaKoroTournament t, int test), IHtmlContent> printTournament =
-        @<h4><strong><a href="ViewTournament?Id=@item.t.Id">@item.t.Name</a></strong> - @item.t.Status, @((DateTime.UtcNow - item.t.CreatedAt).TotalMinutes) minutes ago</h4>;
-
+    int officalTournaments = 0;
+    int nonOfficalTours = 0;
 }
+    <head>
+        <style>
+            .listItem {
+                padding-left:20px;
+            }
+        </style>
+        <script>
+            const refreshIntervalSec = 10;
+            let currentRefreshCountDown = refreshIntervalSec;           
+
+            setInterval(function () {
+                $("#RefreshValue").html(currentRefreshCountDown);
+                currentRefreshCountDown--;
+                if (currentRefreshCountDown < 0) {
+                    window.location.reload(1);
+                }
+            }, 1000);
+        </script>
+    </head>
 
 
-<div>
-    <h3>Bot Leaderboard</h3>
-    @if(Model.MostRecentTour == null)
-    {
-        <h4>No Recent Tournaments.</h4>
-    }
-    else
-    {
-        foreach(TournamentResult result in Model.MostRecentTour.Results)
+    <div>
+        <div id="RefreshText">Refreshing in <span id="RefreshValue">10</span>...</div>
+        <br />
+        <h3>Bot Leaderboard</h3>
+        @if (Model.MostRecentTour == null)
         {
-            <h4>@result.BotName - @result.WinRate</h4>
+            <div class="listItem">No Recent Official Tournaments.</div>
         }
-    }
-
-
-    <h3>Official Tournament List</h3>
-    @foreach (KokkaKoroTournament t in Model.Tournaments)
-    {
-        if (t.IsOfficial)
+        else
         {
-            printTournament((t, 0));
+            int count = 1;
+            foreach (TournamentResult result in Model.MostRecentTour.Results)
+            {
+                <div class="listItem"><strong>#@count. <span style="display:inline-block;min-width:100px;">@result.BotName</span></strong> - @result.Wins wins, @result.Losses losses, @Math.Round(result.WinRate)% win rate.</div>
+                count++;
+            }
         }
-    }
-    <h3>Tournament List</h3>
-    @foreach (KokkaKoroTournament t in Model.Tournaments)
-    {
-        if (!t.IsOfficial)
+
+        <br />
+        <a href="CreateOfficialTournament">Start A New Official Tournament</a>
+        <h3>Official Tournament List</h3>
+        @foreach (KokkaKoroTournament t in Model.Tournaments)
         {
-            printTournament((t, 0));
+            if (t.IsOfficial)
+            {
+                officalTournaments++;
+                TimeSpan runTime = (t.EndedAt.HasValue ? t.EndedAt.Value : DateTime.UtcNow) - t.CreatedAt;
+                <div class="listItem"><strong>#@officalTournaments. <a href="ViewTournament?Id=@t.Id">@t.Name</a></strong> - @t.Status, @t.Games.Count/@t.TotalGames Games Created, @(Math.Round(runTime.TotalMinutes)):@(runTime.Seconds.ToString("00")) Minutes Duration</div>;
+            }
         }
-    }
-    <h3>Game List</h3>
-    @foreach (KokkaKoroGame game in Model.Games)
-    {
-        <h4><strong><a href="ViewGame?GameId=@game.Id">@game.GameName</a></strong> - @game.State - Created by @game.CreatedBy, @((DateTime.UtcNow - game.Created).TotalMinutes) minutes ago</h4>
-    }
-</div>
+        @if (officalTournaments == 0)
+        {
+            <div class="listItem">No Recent Official Tournaments.</div>
+        }
+
+        <br />
+        <h3>Tournament List</h3>
+        @foreach (KokkaKoroTournament t in Model.Tournaments)
+        {
+            if (!t.IsOfficial)
+            {
+                nonOfficalTours++;
+                //printTournament((t, 0));
+            }
+        }
+        @if (nonOfficalTours == 0)
+        {
+            <div class="listItem">No Recent Tournaments.</div>
+        }
+
+        <br />
+        <h3>Game List</h3>
+        @foreach (KokkaKoroGame game in Model.Games)
+        {
+            <div class="listItem"><strong><a href="ViewGame?GameId=@game.Id">@game.GameName</a></strong> - @game.State - Created by @game.CreatedBy, @((DateTime.UtcNow - game.Created).TotalMinutes.ToString("0.0")) minutes ago</div>
+        }
+        @if (Model.Games.Count == 0)
+        {
+            <div class="listItem">No Recent Games.</div>
+        }
+    </div>
 
 

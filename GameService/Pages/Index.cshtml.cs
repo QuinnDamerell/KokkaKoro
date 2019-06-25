@@ -1,4 +1,4 @@
-﻿using System;
+﻿ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,6 +11,7 @@ using ServiceProtocol.Responses;
 
 namespace GameService.Pages
 {
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public class IndexModel : PageModel
     {
         public void OnGet()
@@ -32,6 +33,8 @@ namespace GameService.Pages
                     MostRecentTour = t;
                 }
             }
+            // Sort by the most recent first
+            Tournaments.Sort((KokkaKoroTournament l, KokkaKoroTournament r) => { return l.CreatedAt > r.CreatedAt ? -1 : 1; });
         }
 
         public List<KokkaKoroGame> Games = new List<KokkaKoroGame>();

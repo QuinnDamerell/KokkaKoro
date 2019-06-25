@@ -76,6 +76,9 @@ namespace ServiceProtocol.Common
         // If the status is error, the message that stopped it.
         public string MessageIfError;
 
+        // The number of total games that will be played.
+        public int TotalGames;
+
         // The list of games in the given tournament
         public List<KokkaKoroGame> Games;
 

@@ -226,19 +226,21 @@ namespace GameService.ServiceCore
             List<TournamentResult> results = new List<TournamentResult>();
             foreach(KeyValuePair<string, TournamentResult> p in botRank)
             {
+                // Compute the win rate.
+                if (p.Value.Losses != 0 && p.Value.Wins != 0)
+                {
+                    p.Value.WinRate = ((double)p.Value.Wins / (double)(p.Value.Losses + p.Value.Wins)) * 100.0;
+                }
+                else
+                {
+                    p.Value.WinRate = 0;
+                }
+
+                // Insert sort.
                 bool added = false;
                 for(int i = 0; i < results.Count; i++)
                 {
-                    if (results[i].Losses != 0 && results[i].Wins != 0)
-                    {
-                        results[i].WinRate = ((double)results[i].Wins / (double)(results[i].Losses + results[i].Wins)) * 100.0;
-                    }
-                    else
-                    {
-                        results[i].WinRate = 0;
-                    }
-
-                    if(results[i].Score < p.Value.Score)
+                    if(results[i].Wins < p.Value.Wins)
                     {
                         results.Insert(i, p.Value);
                         added = true;
@@ -260,6 +262,7 @@ namespace GameService.ServiceCore
                 CreatedFor = m_createdBy,
                 CreatedAt = m_createdAt,
                 EndedAt = m_finishedAt,
+                TotalGames = m_numberOfGames,
                 Name = m_name,
                 Games  = gameInfo,
                 Results = results

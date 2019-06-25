@@ -22,7 +22,7 @@ namespace GameService.WebsocketsHelpers
         object m_closeLock = new object();
         bool m_isClosed = false;
         Thread m_readLoop;
-        Mutex m_sendMutex = new Mutex();
+        SemaphoreSlim m_sendMutex = new SemaphoreSlim(1, 1);
 
         public BetterWebsocket(Guid id, WebSocket socket, TaskCompletionSource<object> tcs, IWebSocketMessageHandler handler)
         {
@@ -70,7 +70,7 @@ namespace GameService.WebsocketsHelpers
                     //Sends data back.                     
                     try
                     {
-                        m_sendMutex.WaitOne();
+                        await m_sendMutex.WaitAsync();
                         await m_socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, m_writeCancelToken.Token);
                     }
                     catch(Exception e)
@@ -79,7 +79,7 @@ namespace GameService.WebsocketsHelpers
                     }
                     finally
                     {
-                        m_sendMutex.ReleaseMutex();
+                        m_sendMutex.Release();
                     }
 
                     // Check the state
@@ -110,7 +110,7 @@ namespace GameService.WebsocketsHelpers
                 Byte[] bytes = System.Text.Encoding.UTF8.GetBytes(msg);
                 try
                 {
-                    m_sendMutex.WaitOne();
+                    await m_sendMutex.WaitAsync();
                     await m_socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, m_writeCancelToken.Token);
                 }
                 catch (Exception e)
@@ -119,7 +119,7 @@ namespace GameService.WebsocketsHelpers
                 }
                 finally
                 {
-                    m_sendMutex.ReleaseMutex();
+                    m_sendMutex.Release();
                 }
             }
             catch(Exception e)
